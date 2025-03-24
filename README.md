@@ -1,4 +1,3 @@
-??? from here until ???END lines may have been inserted/deleted
 # YetAnotherMinecraftClone
 
 ## Commands
@@ -20,4 +19,15 @@ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 cargo run --features bevy/dynamic_linking
 ```
 
+### Test
+
+```shell
+cargo test
+```
+
+### Release
+
+```shell
+cargo run --release
+```
 
