@@ -5,9 +5,9 @@
 
 
 ### [Alternative Linkers](https://bevyengine.org/learn/quick-start/getting-started/setup/#alternative-linkers) :
-- Ubuntu: sudo apt-get install lld clang
-- Fedora: sudo dnf install lld clang
-- Arch: sudo pacman -S lld clang
+- Ubuntu: `sudo apt-get install lld clang`
+- Fedora: `sudo dnf install lld clang`
+- Arch: `sudo pacman -S lld clang`
 - Windows: Ensure you have the latest cargo-binutils as this lets commands like cargo run use the LLD linker automatically :
 ```shell
     cargo install -f cargo-binutils
