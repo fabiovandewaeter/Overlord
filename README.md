@@ -1,4 +1,4 @@
-# YetAnotherMinecraftClone
+# Overlord
 
 ## Commands
 [install dependencies](https://bevyengine.org/learn/quick-start/getting-started/setup/#installing-os-dependencies)
@@ -38,4 +38,3 @@ cargo test
 ```shell
 cargo run --release
 ```
-

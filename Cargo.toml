@@ -1,28 +1,36 @@
 [package]
-name = "YetAnotherMinecraftClone"
+name = "Overlord"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 bevy = "0.15.3"
-log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+log = { version = "*", features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
+incremental = true
 opt-level = 1
+codegen-backend = "cranelift"
 
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]
 opt-level = 3
+codegen-backend = "llvm"
 
 # Enable more optimization in the release profile at the cost of compile time.
 [profile.release]
+panic = "abort"
 # Compile the entire crate as one unit.
 # Slows compile times, marginal improvements.
 codegen-units = 1
 # Do a second optimization pass over the entire program, including dependencies.
 # Slows compile times, marginal improvements.
 lto = "thin"
+strip = true
 
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
@@ -33,4 +41,3 @@ inherits = "release"
 opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
-
