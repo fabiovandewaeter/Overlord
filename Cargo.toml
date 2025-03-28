@@ -12,6 +12,7 @@ render = []
 [dependencies]
 bevy = "0.15.3"
 bevy_ecs_tilemap = "0.15.0"
+bevy_framepace = "0.18.1"
 ldtk_rust = "0.6.0"
 log = { version = "*", features = [
     "max_level_debug",
