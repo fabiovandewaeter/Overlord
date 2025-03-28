@@ -1,7 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PresentMode};
 use bevy_ecs_tilemap::prelude::*;
 
 mod helpers;
+
+const TPS: f64 = 60.0;
 
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
@@ -69,21 +71,46 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+pub fn printnul(
+    time: Res<Time>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
+) {
+    for (mut transform, mut ortho) in query.iter_mut() {
+        let mut direction = Vec3::ZERO;
+
+        direction -= Vec3::new(1.0, 0.0, 0.0);
+
+        let z = transform.translation.z;
+        transform.translation += time.delta_secs() * direction * 500.;
+        // Important! We need to restore the Z values when moving the camera around.
+        // Bevy has a specific camera setup and this can mess with how our layers are shown.
+        transform.translation.z = z;
+    }
+}
+
 fn main() {
+    use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+    use bevy::diagnostic::LogDiagnosticsPlugin;
     App::new()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: String::from("Layers Example"),
+                        present_mode: PresentMode::Immediate, // disable vsync
                         ..Default::default()
                     }),
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(TilemapPlugin)
+        .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, startup)
+        .insert_resource(Time::<Fixed>::from_seconds(1.0 / TPS)) // tick speed decoupled from framerate
         .add_systems(Update, helpers::camera::movement)
+        .add_systems(FixedUpdate, printnul)
         .run();
 }

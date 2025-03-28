@@ -1,7 +1,6 @@
 use bevy::{input::ButtonInput, math::Vec3, prelude::*, render::camera::Camera};
 
 // A simple camera system for moving and zooming the camera.
-#[allow(dead_code)]
 pub fn movement(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -27,11 +26,11 @@ pub fn movement(
         }
 
         if keyboard_input.pressed(KeyCode::KeyZ) {
-            ortho.scale += 0.1;
+            ortho.scale += 0.02;
         }
 
         if keyboard_input.pressed(KeyCode::KeyX) {
-            ortho.scale -= 0.1;
+            ortho.scale -= 0.02;
         }
 
         if ortho.scale < 0.5 {
