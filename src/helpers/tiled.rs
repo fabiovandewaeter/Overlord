@@ -1,3 +1,5 @@
+// source : https://github.com/StarArawn/bevy_ecs_tilemap/blob/main/examples/helpers/tiled.rs
+
 // How to use this:
 //   You should copy/paste this into your project and use it much like examples/tiles.rs uses this
 //   file. When you do so you will need to adjust the code based on whether you're using the
