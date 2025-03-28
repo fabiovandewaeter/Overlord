@@ -1,11 +1,17 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+
 mod helpers;
 
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
 
-    let texture_handle: Handle<Image> = asset_server.load("img/tiles/grass_0.png");
+    //let texture_handle: Handle<Image> = asset_server.load("img/tiles/grass_0.png");
+    let textures: Vec<Handle<Image>> = vec![
+        asset_server.load("img/tiles/grass_0.png"),
+        asset_server.load("img/tiles/grass_1.png"),
+        // Charger d'autres textures selon vos besoins
+    ];
 
     let map_size = TilemapSize { x: 32, y: 32 };
 
@@ -21,8 +27,10 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         &mut tile_storage,
     );
 
-    let tile_size = TilemapTileSize { x: 16.0, y: 16.0 };
-    let grid_size = tile_size.into();
+    const TILE_SIZE_SQUARE: TilemapTileSize = TilemapTileSize { x: 34.0, y: 34.0 };
+    //let tile_size = TilemapTileSize { x: 16.0, y: 16.0 };
+    //let tile_size = TilemapTileSize { x: 34.0, y: 34.0 };
+    let grid_size = TILE_SIZE_SQUARE.into();
     let map_type = TilemapType::default();
 
     commands.entity(tilemap_entity).insert(TilemapBundle {
@@ -30,8 +38,8 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         map_type,
         size: map_size,
         storage: tile_storage,
-        texture: TilemapTexture::Single(texture_handle.clone()),
-        tile_size,
+        texture: TilemapTexture::Vector(textures.clone()),
+        tile_size: TILE_SIZE_SQUARE,
         transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
         ..Default::default()
     });
@@ -41,7 +49,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let tilemap_entity = commands.spawn_empty().id();
 
     fill_tilemap(
-        TileTextureIndex(2),
+        TileTextureIndex(1),
         map_size,
         TilemapId(tilemap_entity),
         &mut commands,
@@ -53,8 +61,8 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         map_type,
         size: map_size,
         storage: tile_storage,
-        texture: TilemapTexture::Single(texture_handle),
-        tile_size: TilemapTileSize { x: 16.0, y: 16.0 },
+        texture: TilemapTexture::Vector(textures),
+        tile_size: TILE_SIZE_SQUARE,
         transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 1.0)
             * Transform::from_xyz(32.0, 32.0, 0.0),
         ..Default::default()
