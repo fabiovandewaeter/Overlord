@@ -27,7 +27,7 @@ use bevy::{
     reflect::TypePath,
     utils::HashMap,
 };
-use bevy_ecs_tilemap::prelude::*;
+use bevy_ecs_tilemap::{FrustumCulling, prelude::*};
 
 use thiserror::Error;
 
@@ -392,6 +392,7 @@ pub fn process_loaded_maps(
                                 layer_index as f32,
                             ) * Transform::from_xyz(offset_x, -offset_y, 0.0),
                             map_type,
+                            frustum_culling: FrustumCulling(true),
                             render_settings: *render_settings,
                             ..Default::default()
                         });
