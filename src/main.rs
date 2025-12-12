@@ -61,16 +61,16 @@ fn main() {
         )
         .add_systems(
             FixedUpdate,
-            (
-                fixed_update_counter_system.in_set(FixedSet::Process),
-                // apply_velocity_system.in_set(FixedSet::Movement),
-                // collision_resolution_system.in_set(FixedSet::Collision),
-            ),
+            (fixed_update_counter_system.in_set(FixedSet::Process),),
         )
         .run();
 }
 
 fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // Audio
+    commands.spawn(AudioPlayer::new(asset_server.load("audio/gentle-rain.ogg")));
+
+    // Camera
     let mut orthographic_projection = OrthographicProjection::default_2d();
     orthographic_projection.scale *= 0.8;
     let projection = Projection::Orthographic(orthographic_projection);
@@ -81,6 +81,7 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
         CameraMovement(CameraMovementKind::SmoothFollowPlayer),
     ));
 
+    // Units + Player
     let player_texture_handle = asset_server.load("default.png");
     let speed = SpeedStat(UNIT_DEFAULT_MOVEMENT_SPEED);
     let coordinates = Coordinates { x: 0.0, y: 0.0 };

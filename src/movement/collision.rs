@@ -188,8 +188,8 @@ pub fn collision_resolution_system(
     // Pour chaque paire : test et résolution
     for i in 0..entities_data.len() {
         for j in (i + 1)..entities_data.len() {
-            let (entity_i, pos_i, collider_i, imm_i) = &entities_data[i];
-            let (entity_j, pos_j, collider_j, imm_j) = &entities_data[j];
+            let (_, pos_i, collider_i, imm_i) = &entities_data[i];
+            let (_, pos_j, collider_j, imm_j) = &entities_data[j];
 
             // Si pas de chevauchement, on skip
             if !collider_i.overlaps(*pos_i, collider_j, *pos_j) {
