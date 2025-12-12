@@ -71,7 +71,10 @@ fn main() {
 
 fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Audio
-    commands.spawn(AudioPlayer::new(asset_server.load("audio/gentle-rain.ogg")));
+    commands.spawn((
+        AudioPlayer::new(asset_server.load("audio/gentle-rain.ogg")),
+        PlaybackSettings::LOOP,
+    ));
 
     // Camera
     let mut orthographic_projection = OrthographicProjection::default_2d();

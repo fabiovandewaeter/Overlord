@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 pub const UNIT_REACH: f32 = 1.0;
 pub const UNIT_DEFAULT_SIZE: f32 = TILE_SIZE.x * 0.8;
-pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 3.0;
+pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 5.0;
 pub const UNIT_LAYER: f32 = 1.0;
 
 #[derive(Component, Debug, Default, Serialize, Deserialize)]
