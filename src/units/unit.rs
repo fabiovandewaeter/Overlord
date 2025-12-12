@@ -2,6 +2,7 @@
 
 use crate::{
     // CURRENT_SAVE_VERSION, PATH_SAVES,
+    FixedSet,
     direction::Direction,
     map::{
         TILE_SIZE,
@@ -21,20 +22,21 @@ use serde::{Deserialize, Serialize};
 
 pub const UNIT_REACH: f32 = 1.0;
 pub const UNIT_DEFAULT_SIZE: f32 = TILE_SIZE.x * 0.8;
-// pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = 2000.0;
-// pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = 5000.0;
 pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 3.0;
 pub const UNIT_LAYER: f32 = 1.0;
 
 pub struct UnitsPlugin;
-
 impl Plugin for UnitsPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_systems(
             FixedUpdate,
             (
-                player_control_system.before(apply_velocity_system),
-                units_follow_field_system.before(apply_velocity_system),
+                player_control_system
+                    .in_set(FixedSet::Movement)
+                    .before(apply_velocity_system),
+                units_follow_field_system
+                    .in_set(FixedSet::Movement)
+                    .before(apply_velocity_system),
             ),
         );
     }
@@ -82,7 +84,6 @@ pub fn units_follow_field_system(
         (With<Unit>, Without<Player>),
     >,
     flow_field: Res<FlowField>,
-    time: Res<Time<Fixed>>,
 ) {
     for (mut linear_velocity, transform, speed_stat) in unit_query.iter_mut() {
         let current_pos_world = transform.translation.xy();
@@ -103,9 +104,6 @@ pub fn units_follow_field_system(
             let direction_to_target = to_target_vec.normalize_or_zero();
 
             // Appliquer la force
-            // let delta_time = time.delta_secs();
-            // linear_velocity.x += direction_to_target.x * speed_stat.0 * delta_time;
-            // linear_velocity.y += direction_to_target.y * speed_stat.0 * delta_time;
             linear_velocity.x = direction_to_target.x * speed_stat.0;
             linear_velocity.y = direction_to_target.y * speed_stat.0;
         } else {

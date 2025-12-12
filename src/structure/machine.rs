@@ -1,5 +1,5 @@
 use crate::{
-    UPS_TARGET,
+    FixedSet, GameSet, UPS_TARGET,
     direction::Direction,
     items::{
         inventory::{InputInventory, ItemStack, OutputInventory},
@@ -17,10 +17,9 @@ use std::f32::consts::{FRAC_PI_2, PI};
 pub const DEFAULT_ACTION_TIME_TICKS: u64 = UPS_TARGET as u64 * 1; // 1 second
 
 pub struct MachinePlugin;
-
 impl Plugin for MachinePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, orient_machines_system)
+        app.add_systems(PostUpdate, orient_machines_system.in_set(GameSet::Visual))
             .add_systems(
                 FixedUpdate,
                 (
@@ -30,8 +29,10 @@ impl Plugin for MachinePlugin {
                         process_mining_machines_system,
                     ),
                     transfert_items_to_next_machine_system,
-                    print_machine_inventories_system,
-                ),
+                    // print_machine_inventories_system,
+                )
+                    .chain()
+                    .in_set(FixedSet::Process),
             );
     }
 }
@@ -293,25 +294,19 @@ pub fn transfert_items_to_next_machine_system(
 pub fn print_machine_inventories_system(
     query: Query<(&Name, Option<&InputInventory>, &mut OutputInventory), With<Machine>>,
 ) {
-    // for (name, input_inventory, output_inventory) in query.iter() {
-    //     if let Some(input_inventory) = &input_inventory {
-    //         println!(
-    //             "{:?}: {:?} | {:?}",
-    //             name, input_inventory.0.slots, output_inventory.0.slots
-    //         )
-    //     } else {
-    //         println!("{:?}: {:?}", name, output_inventory.0.slots)
-    //     }
-    // }
     let mut counter = 0;
     for (name, input_inventory, output_inventory) in query.iter() {
+        counter += 1;
         if let Some(input_inventory) = &input_inventory {
-            counter += 1;
+            println!(
+                "{:?}: {:?} | {:?}",
+                name, input_inventory.0.slots, output_inventory.0.slots
+            )
         } else {
-            counter += 1;
+            println!("{:?}: {:?}", name, output_inventory.0.slots)
         }
     }
-    println!("{}", counter);
+    println!("{} machines", counter);
 }
 
 pub fn orient_machines_system(mut query: Query<(&Direction, &mut Transform), With<Machine>>) {

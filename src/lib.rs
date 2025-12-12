@@ -1,3 +1,5 @@
+use bevy::ecs::schedule::SystemSet;
+
 pub mod camera;
 pub mod direction;
 pub mod items;
@@ -16,3 +18,18 @@ pub const ZOOM_OUT_SPEED: f32 = 4.0 * 400000000.0;
 pub const CAMERA_SPEED: f32 = 37.5;
 pub const LENGTH_UNIT: f32 = 16.0;
 pub const DAY_DURATION: u32 = UPS_TARGET * 60 * 10; // 10 minutes in ticks
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum GameSet {
+    Input,
+    Visual,
+    UI,
+}
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum FixedSet {
+    // Order matters: Process -> Move -> Collide
+    Process,
+    Movement,
+    Collision,
+}

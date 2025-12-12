@@ -1,4 +1,5 @@
 use crate::{
+    FixedSet,
     direction::Direction,
     items::{
         ItemType, Quality,
@@ -36,7 +37,6 @@ pub const PATH_SOURCES_PNG: &'static str = "tiles/sources/";
 pub const DEFAULT_CURRENT_MAP: &'static str = "DEFAULT_MAP";
 
 pub struct MapPlugin;
-
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapManager::default())
@@ -47,7 +47,8 @@ impl Plugin for MapPlugin {
                     // spawn_chunks_around_camera_system,
                     spawn_chunks_around_units_system,
                 )
-                    .chain(),
+                    .chain()
+                    .in_set(FixedSet::Process),
             )
             .add_systems(Update, update_tileset_image);
     }

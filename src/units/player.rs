@@ -26,7 +26,6 @@ pub fn player_control_system(
     mut unit_query: Query<(&mut LinearVelocity, &mut Direction, &SpeedStat), With<Player>>,
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
-    time: Res<Time<Fixed>>,
 ) {
     let Ok((mut velocity, mut direction, speed_stat)) = unit_query.single_mut() else {
         return;
@@ -60,9 +59,6 @@ pub fn player_control_system(
     }
 
     // Appliquer la vitesse
-    // let delta_time = time.delta_secs();
-    // velocity.x = delta.x * speed_stat.0 * delta_time;
-    // velocity.y = delta.y * speed_stat.0 * delta_time;
     velocity.x = delta.x * speed_stat.0;
     velocity.y = delta.y * speed_stat.0;
 

@@ -1,9 +1,10 @@
 use crate::{
+    FixedSet,
     map::{
         MapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
-    units::Player,
+    units::{Player, player_control_system},
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};
 use pathfinding::prelude::dijkstra_all;
@@ -12,6 +13,18 @@ use std::collections::HashMap;
 const FLOWFIELD_RADIUS: i32 = 50; // radius in tile
 
 pub struct PathfindingPlugin;
+impl Plugin for PathfindingPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(FlowField::default())
+            .add_message::<RecalculateFlowField>()
+            .add_systems(
+                FixedUpdate,
+                calculate_flow_field_system
+                    .in_set(FixedSet::Process)
+                    .before(player_control_system),
+            );
+    }
+}
 
 #[derive(Resource, Default)]
 // pub struct FlowField(pub HashMap<TileCoordinates, Vec2>);
@@ -19,14 +32,6 @@ pub struct FlowField(pub HashMap<TileCoordinates, TileCoordinates>);
 
 #[derive(Message, Default)]
 pub struct RecalculateFlowField;
-
-impl Plugin for PathfindingPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(FlowField::default())
-            .add_message::<RecalculateFlowField>()
-            .add_systems(FixedUpdate, calculate_flow_field_system);
-    }
-}
 
 pub fn calculate_flow_field_system(
     mut message_recalculate: MessageReader<RecalculateFlowField>,

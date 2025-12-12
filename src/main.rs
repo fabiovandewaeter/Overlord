@@ -1,7 +1,7 @@
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use overlord::{
-    UPS_TARGET,
+    FixedSet, GameSet, UPS_TARGET,
     camera::{
         CameraMovement, CameraMovementKind, UpsCounter, display_fps_ups_system,
         handle_camera_inputs_system,
@@ -21,6 +21,11 @@ use overlord::{
 
 fn main() {
     App::new()
+        .configure_sets(Update, (GameSet::Input, GameSet::Visual, GameSet::UI))
+        .configure_sets(
+            FixedUpdate,
+            (FixedSet::Process, FixedSet::Movement, FixedSet::Collision).chain(),
+        )
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -52,16 +57,17 @@ fn main() {
         .add_systems(
             Update,
             (
-                handle_camera_inputs_system,
-                display_fps_ups_system,
+                handle_camera_inputs_system.in_set(GameSet::Input),
+                display_fps_ups_system.in_set(GameSet::UI),
                 // control_time_system,
             ),
         )
         .add_systems(
             FixedUpdate,
             (
-                update_logic_system,
-                (apply_velocity_system, collision_resolution_system),
+                fixed_update_counter_system.in_set(FixedSet::Process),
+                apply_velocity_system.in_set(FixedSet::Movement),
+                collision_resolution_system.in_set(FixedSet::Collision),
             ),
         )
         .run();
@@ -102,7 +108,7 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 }
 
-pub fn update_logic_system(mut counter: ResMut<UpsCounter>) {
+pub fn fixed_update_counter_system(mut counter: ResMut<UpsCounter>) {
     counter.ticks += 1;
 }
 
