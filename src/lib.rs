@@ -6,6 +6,7 @@ pub mod items;
 pub mod map;
 pub mod movement;
 // pub mod save;
+pub mod physics;
 pub mod structure;
 pub mod units;
 

@@ -2,7 +2,6 @@
 
 use crate::{
     // CURRENT_SAVE_VERSION, PATH_SAVES,
-    FixedSet,
     direction::Direction,
     map::{
         TILE_SIZE,
@@ -10,11 +9,8 @@ use crate::{
             AbsoluteCoordinates, absolute_coord_to_tile_coord, tile_coord_to_absolute_coord,
         },
     },
-    movement::{LinearVelocity, apply_velocity_system, collision::Collider},
-    units::{
-        pathfinding::FlowField,
-        player::{Player, player_control_system},
-    },
+    movement::{LinearVelocity, collision::Collider},
+    units::{pathfinding::FlowField, player::Player},
 };
 use bevy::prelude::*;
 use bevy_transform_interpolation::prelude::TranslationInterpolation;
@@ -24,23 +20,6 @@ pub const UNIT_REACH: f32 = 1.0;
 pub const UNIT_DEFAULT_SIZE: f32 = TILE_SIZE.x * 0.8;
 pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 3.0;
 pub const UNIT_LAYER: f32 = 1.0;
-
-pub struct UnitsPlugin;
-impl Plugin for UnitsPlugin {
-    fn build(&self, app: &mut bevy::app::App) {
-        app.add_systems(
-            FixedUpdate,
-            (
-                player_control_system
-                    .in_set(FixedSet::Movement)
-                    .before(apply_velocity_system),
-                units_follow_field_system
-                    .in_set(FixedSet::Movement)
-                    .before(apply_velocity_system),
-            ),
-        );
-    }
-}
 
 #[derive(Component, Debug, Default, Serialize, Deserialize)]
 pub struct Unit;

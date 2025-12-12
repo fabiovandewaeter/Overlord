@@ -11,10 +11,10 @@ use overlord::{
         MapPlugin,
         coordinates::{Coordinates, coord_to_absolute_coord},
     },
-    movement::{apply_velocity_system, collision::collision_resolution_system},
+    physics::PhysicsPlugin,
     structure::machine::MachinePlugin,
     units::{
-        PlayerBundle, SpeedStat, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle, UnitsPlugin,
+        PlayerBundle, SpeedStat, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle,
         pathfinding::PathfindingPlugin,
     },
 };
@@ -40,10 +40,7 @@ fn main() {
         )
         .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .add_plugins(UnitsPlugin)
-        .add_plugins(MapPlugin)
-        .add_plugins(PathfindingPlugin)
-        .add_plugins(MachinePlugin)
+        .add_plugins((PhysicsPlugin, MapPlugin, PathfindingPlugin, MachinePlugin))
         // .add_plugins(SavePlugin)
         // .insert_resource(TimeState::default())
         .insert_resource(UpsCounter {
@@ -66,8 +63,8 @@ fn main() {
             FixedUpdate,
             (
                 fixed_update_counter_system.in_set(FixedSet::Process),
-                apply_velocity_system.in_set(FixedSet::Movement),
-                collision_resolution_system.in_set(FixedSet::Collision),
+                // apply_velocity_system.in_set(FixedSet::Movement),
+                // collision_resolution_system.in_set(FixedSet::Collision),
             ),
         )
         .run();
