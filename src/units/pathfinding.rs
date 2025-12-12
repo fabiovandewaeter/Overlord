@@ -1,5 +1,8 @@
 use crate::{
-    map::{MapManager, StructureLayerManager, TileCoordinates, absolute_coord_to_tile_coord},
+    map::{
+        MapManager, StructureLayerManager,
+        coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
+    },
     units::Player,
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};

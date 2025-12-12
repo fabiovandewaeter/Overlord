@@ -1,6 +1,6 @@
 use crate::{
     items::{ItemType, Quality, inventory::ItemStack},
-    map::machine::DEFAULT_ACTION_TIME_TICKS,
+    structure::machine::DEFAULT_ACTION_TIME_TICKS,
 };
 use bevy::ecs::resource::Resource;
 use std::collections::HashMap;

@@ -1,14 +1,15 @@
 use crate::{
     UPS_TARGET,
+    direction::Direction,
     items::{
         inventory::{InputInventory, ItemStack, OutputInventory},
         recipe::{RecipeBook, RecipeId},
     },
     map::{
-        MapManager, StructureBundle, StructureLayerManager, TileCoordinates,
-        absolute_coord_to_tile_coord,
+        MapManager, StructureLayerManager,
+        coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
-    units::Direction,
+    structure::StructureBundle,
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};
 use std::f32::consts::{FRAC_PI_2, PI};
@@ -53,10 +54,8 @@ impl Default for Machine {
 #[derive(Bundle)]
 pub struct MachineBaseBundle {
     pub name: Name,
-    // pub structure_bundle: Structure,
     pub structure_bundle: StructureBundle,
     pub direction: Direction,
-    // pub transform: Transform,
     pub machine: Machine,
 }
 
@@ -294,16 +293,25 @@ pub fn transfert_items_to_next_machine_system(
 pub fn print_machine_inventories_system(
     query: Query<(&Name, Option<&InputInventory>, &mut OutputInventory), With<Machine>>,
 ) {
+    // for (name, input_inventory, output_inventory) in query.iter() {
+    //     if let Some(input_inventory) = &input_inventory {
+    //         println!(
+    //             "{:?}: {:?} | {:?}",
+    //             name, input_inventory.0.slots, output_inventory.0.slots
+    //         )
+    //     } else {
+    //         println!("{:?}: {:?}", name, output_inventory.0.slots)
+    //     }
+    // }
+    let mut counter = 0;
     for (name, input_inventory, output_inventory) in query.iter() {
         if let Some(input_inventory) = &input_inventory {
-            println!(
-                "{:?}: {:?} | {:?}",
-                name, input_inventory.0.slots, output_inventory.0.slots
-            )
+            counter += 1;
         } else {
-            println!("{:?}: {:?}", name, output_inventory.0.slots)
+            counter += 1;
         }
     }
+    println!("{}", counter);
 }
 
 pub fn orient_machines_system(mut query: Query<(&Direction, &mut Transform), With<Machine>>) {

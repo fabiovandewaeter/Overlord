@@ -1,16 +1,19 @@
-use avian2d::prelude::*;
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use overlord::{
-    LENGTH_UNIT, UPS_TARGET,
+    UPS_TARGET,
     camera::{
         CameraMovement, CameraMovementKind, UpsCounter, display_fps_ups_system,
         handle_camera_inputs_system,
     },
     items::recipe::RecipeBook,
-    map::{Coordinates, MapPlugin, coord_to_absolute_coord, machine::MachinePlugin},
-    save::SavePlugin,
+    map::{
+        MapPlugin,
+        coordinates::{Coordinates, coord_to_absolute_coord},
+    },
+    movement::{apply_velocity_system, collision::collision_resolution_system},
+    structure::machine::MachinePlugin,
     units::{
-        Player, Speed, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle, UnitsPlugin,
+        Player, SpeedStat, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle, UnitsPlugin,
         pathfinding::PathfindingPlugin,
     },
 };
@@ -29,14 +32,14 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
+        // .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(UnitsPlugin)
         .add_plugins(MapPlugin)
         .add_plugins(PathfindingPlugin)
         .add_plugins(MachinePlugin)
-        .add_plugins(SavePlugin)
-        .insert_resource(Gravity(Vec2::ZERO))
+        // .add_plugins(SavePlugin)
+        // .insert_resource(Gravity(Vec2::ZERO))
         // .insert_resource(TimeState::default())
         .insert_resource(UpsCounter {
             ticks: 0,
@@ -54,7 +57,13 @@ fn main() {
                 // control_time_system,
             ),
         )
-        .add_systems(FixedUpdate, (update_logic_system,))
+        .add_systems(
+            FixedUpdate,
+            (
+                update_logic_system,
+                (apply_velocity_system, collision_resolution_system),
+            ),
+        )
         .run();
 }
 
@@ -70,7 +79,7 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     let player_texture_handle = asset_server.load("default.png");
-    let speed = Speed(UNIT_DEFAULT_MOVEMENT_SPEED);
+    let speed = SpeedStat(UNIT_DEFAULT_MOVEMENT_SPEED);
     let coordinates = Coordinates { x: 0.0, y: 0.0 };
     let absolute_coordinates = coord_to_absolute_coord(coordinates);
     let mut transform =
@@ -91,7 +100,7 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     let bundle = UnitBundle::new(
         Name::new("Monstre"),
         transform,
-        Speed(UNIT_DEFAULT_MOVEMENT_SPEED * 20.0),
+        SpeedStat(UNIT_DEFAULT_MOVEMENT_SPEED),
     );
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 }
