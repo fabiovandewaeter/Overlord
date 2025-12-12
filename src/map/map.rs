@@ -133,6 +133,10 @@ pub fn spawn_one_chunk(
     map_manager: &mut ResMut<MapManager>,
     message_recalculate: &mut MessageWriter<RecalculateFlowField>,
 ) -> () {
+    if map_manager.chunks.contains_key(&chunk_coord) {
+        return;
+    }
+    println!("spawn_one_chunk()");
     let mut rng = rand::rng();
     // let chunk_coord = ChunkCoordinates { x: 0, y: 0 };
     let mut structure_layer_manager = StructureLayerManager::default();

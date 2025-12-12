@@ -1,4 +1,12 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite_render::TilemapChunk};
+
+use crate::{
+    map::{
+        MapManager, StructureLayerManager,
+        coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
+    },
+    units::Unit,
+};
 
 #[derive(Component)]
 pub struct Immovable;
@@ -177,56 +185,77 @@ impl Collider {
 
 /// Pour chaque paire, si chevauchement -> calcule la correction et applique moitié/moitié.
 pub fn collision_resolution_system(
-    mut query: Query<(Entity, &mut Transform, &Collider, Has<Immovable>)>,
+    mut unit_query: Query<(Entity, &mut Transform, &Collider), With<Unit>>,
+    structure_query: Query<(&Transform, &Collider), (Without<Unit>, With<Immovable>)>,
+    map_manager: Res<MapManager>,
+    chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>, // mut query: Query<(Entity, &mut Transform, &Collider, Has<Immovable>)>,
 ) {
-    // Collecte toutes les positions et colliders (clone de collider pour traitement hors borrow)
-    let mut entities_data: Vec<(Entity, Vec2, Collider, bool)> = query
+    // Collecte les données des unités pour le test Unité vs Unité
+    let mut units_data: Vec<(Entity, Vec2, Collider)> = unit_query
         .iter()
-        .map(|(e, t, c, imm)| (e, t.translation.truncate(), c.clone(), imm))
+        .map(|(e, t, c)| (e, t.translation.truncate(), c.clone()))
         .collect();
 
-    // Pour chaque paire : test et résolution
-    for i in 0..entities_data.len() {
-        for j in (i + 1)..entities_data.len() {
-            let (_, pos_i, collider_i, imm_i) = &entities_data[i];
-            let (_, pos_j, collider_j, imm_j) = &entities_data[j];
+    // --- PARTIE 1 : Unité vs Unité (Dynamique vs Dynamique) ---
+    // On garde la boucle ici car le nombre d'unités est généralement faible (< 100)
+    for i in 0..units_data.len() {
+        for j in (i + 1)..units_data.len() {
+            let (_, pos_i, col_i) = &units_data[i];
+            let (_, pos_j, col_j) = &units_data[j];
 
-            // Si pas de chevauchement, on skip
-            if !collider_i.overlaps(*pos_i, collider_j, *pos_j) {
-                continue;
-            }
-
-            // Calcule la correction pour pos_i (delta à ajouter à pos_i pour séparer)
-            let correction = collider_i.resolve_overlap(*pos_i, collider_j, *pos_j);
-            if correction == Vec2::ZERO {
-                continue;
-            }
-
-            match (imm_i, imm_j) {
-                (true, true) => {
-                    // les deux immobiles : on ne bouge rien
-                    continue;
-                }
-                (true, false) => {
-                    // i immobile, j movable -> applique la correction complète en sens opposé sur j
-                    entities_data[j].1 -= correction;
-                }
-                (false, true) => {
-                    // i movable, j immobile -> applique la correction complète sur i
-                    entities_data[i].1 += correction;
-                }
-                (false, false) => {
-                    // les deux movables -> partage moitié/moitié
-                    entities_data[i].1 += correction * 0.5;
-                    entities_data[j].1 -= correction * 0.5;
+            if col_i.overlaps(*pos_i, col_j, *pos_j) {
+                let correction = col_i.resolve_overlap(*pos_i, col_j, *pos_j);
+                if correction != Vec2::ZERO {
+                    // Les deux bougent : on pousse moitié-moitié
+                    units_data[i].1 += correction * 0.5;
+                    units_data[j].1 -= correction * 0.5;
                 }
             }
         }
     }
 
-    // Applique les corrections aux transforms
-    for (entity, new_pos, _, _) in entities_data {
-        if let Ok((_, mut transform, _, _)) = query.get_mut(entity) {
+    // --- PARTIE 2 : Unité vs Environnement (Grid Lookup) ---
+    // Au lieu de boucler sur 1000 murs, on regarde juste les 9 cases autour de l'unité
+    for (_, (_, pos, collider)) in units_data.iter_mut().enumerate() {
+        // Convertir la position absolue en coordonnées de tuile
+        let center_tile =
+            absolute_coord_to_tile_coord(crate::map::coordinates::AbsoluteCoordinates {
+                x: pos.x,
+                y: pos.y,
+            });
+
+        // Vérifier les voisins immédiats (3x3 autour de l'unité)
+        for x in -1..=1 {
+            for y in -1..=1 {
+                let check_tile = TileCoordinates {
+                    x: center_tile.x + x,
+                    y: center_tile.y + y,
+                };
+
+                // Utilisation du MapManager pour récupérer l'entité sur cette case (O(1))
+                if let Some(structure_entity) = map_manager.get_tile(check_tile, &chunk_query) {
+                    // Si on trouve une structure, on récupère son Collider et Transform
+                    if let Ok((struct_transform, struct_collider)) =
+                        structure_query.get(structure_entity)
+                    {
+                        let struct_pos = struct_transform.translation.truncate();
+
+                        if collider.overlaps(*pos, struct_collider, struct_pos) {
+                            let correction =
+                                collider.resolve_overlap(*pos, struct_collider, struct_pos);
+                            // L'unité bouge, le mur est Immovable -> 100% de la correction sur l'unité
+                            *pos += correction;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- APPLICATION ---
+    // On applique les nouvelles positions aux Transforms des unités uniquement
+    for (entity, new_pos, _) in units_data {
+        if let Ok((_, mut transform, _)) = unit_query.get_mut(entity) {
             transform.translation.x = new_pos.x;
             transform.translation.y = new_pos.y;
         }

@@ -21,11 +21,11 @@ use overlord::{
 
 fn main() {
     App::new()
-        .configure_sets(Update, (GameSet::Input, GameSet::Visual, GameSet::UI))
-        .configure_sets(
-            FixedUpdate,
-            (FixedSet::Process, FixedSet::Movement, FixedSet::Collision).chain(),
-        )
+        // .configure_sets(Update, (GameSet::Input, GameSet::Visual, GameSet::UI))
+        // .configure_sets(
+        //     FixedUpdate,
+        //     (FixedSet::Process, FixedSet::Movement, FixedSet::Collision).chain(),
+        // )
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -40,7 +40,10 @@ fn main() {
         )
         .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .add_plugins((PhysicsPlugin, MapPlugin, PathfindingPlugin, MachinePlugin))
+        .add_plugins(PhysicsPlugin)
+        .add_plugins(MapPlugin)
+        .add_plugins(PathfindingPlugin)
+        .add_plugins(MachinePlugin)
         // .add_plugins(SavePlugin)
         // .insert_resource(TimeState::default())
         .insert_resource(UpsCounter {
