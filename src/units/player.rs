@@ -3,11 +3,24 @@ use bevy::prelude::*;
 use crate::{
     direction::Direction,
     movement::LinearVelocity,
-    units::{SpeedStat, pathfinding::RecalculateFlowField},
+    units::{SpeedStat, UnitBundle, pathfinding::RecalculateFlowField},
 };
 
 #[derive(Component)]
 pub struct Player;
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    pub base: UnitBundle,
+    pub player: Player,
+}
+impl PlayerBundle {
+    pub fn new(base: UnitBundle) -> Self {
+        Self {
+            base,
+            player: Player,
+        }
+    }
+}
 
 pub fn player_control_system(
     mut unit_query: Query<(&mut LinearVelocity, &mut Direction, &SpeedStat), With<Player>>,

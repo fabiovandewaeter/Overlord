@@ -16,6 +16,7 @@ use crate::{
     },
 };
 use bevy::prelude::*;
+use bevy_transform_interpolation::prelude::TranslationInterpolation;
 use serde::{Deserialize, Serialize};
 
 pub const UNIT_REACH: f32 = 1.0;
@@ -49,6 +50,7 @@ pub struct UnitBundle {
     pub speed_stat: SpeedStat,
     pub collider: Collider,
     pub linear_velocity: LinearVelocity,
+    pub translation_interpolation: TranslationInterpolation,
     pub unit: Unit,
 }
 impl UnitBundle {
@@ -60,6 +62,7 @@ impl UnitBundle {
             speed_stat,
             collider: Collider::circle(UNIT_DEFAULT_SIZE / 2.0),
             linear_velocity: LinearVelocity::ZERO,
+            translation_interpolation: TranslationInterpolation,
             unit: Unit,
         }
     }

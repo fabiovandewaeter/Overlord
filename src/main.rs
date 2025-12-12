@@ -1,4 +1,5 @@
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
+use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use overlord::{
     UPS_TARGET,
     camera::{
@@ -13,7 +14,7 @@ use overlord::{
     movement::{apply_velocity_system, collision::collision_resolution_system},
     structure::machine::MachinePlugin,
     units::{
-        Player, SpeedStat, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle, UnitsPlugin,
+        PlayerBundle, SpeedStat, UNIT_DEFAULT_MOVEMENT_SPEED, UNIT_LAYER, UnitBundle, UnitsPlugin,
         pathfinding::PathfindingPlugin,
     },
 };
@@ -32,14 +33,13 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        // .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
+        .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(UnitsPlugin)
         .add_plugins(MapPlugin)
         .add_plugins(PathfindingPlugin)
         .add_plugins(MachinePlugin)
         // .add_plugins(SavePlugin)
-        // .insert_resource(Gravity(Vec2::ZERO))
         // .insert_resource(TimeState::default())
         .insert_resource(UpsCounter {
             ticks: 0,
@@ -85,12 +85,9 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut transform =
         Transform::from_xyz(absolute_coordinates.x, absolute_coordinates.y, UNIT_LAYER);
     transform.scale *= 0.8;
-    let bundle = UnitBundle::new(Name::new("Player"), transform, speed);
-    commands.spawn((
-        bundle,
-        Sprite::from_image(player_texture_handle.clone()),
-        Player,
-    ));
+    let unit_bundle = UnitBundle::new(Name::new("Player"), transform, speed);
+    let bundle = PlayerBundle::new(unit_bundle);
+    commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 
     let coordinates = Coordinates { x: 5.0, y: 5.0 };
     let absolute_coordinates = coord_to_absolute_coord(coordinates);
