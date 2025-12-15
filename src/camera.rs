@@ -1,9 +1,13 @@
-use crate::{CAMERA_SPEED, ZOOM_IN_SPEED, ZOOM_OUT_SPEED, map::TILE_SIZE, units::Player};
+use crate::{map::TILE_SIZE, units::Player};
 use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
 };
+
+pub const ZOOM_IN_SPEED: f32 = 0.25 / 400000000.0;
+pub const ZOOM_OUT_SPEED: f32 = 4.0 * 400000000.0;
+pub const CAMERA_SPEED: f32 = 37.5;
 
 #[derive(Component)]
 pub struct CameraMovement(pub CameraMovementKind);
@@ -148,3 +152,6 @@ pub fn handle_camera_inputs_system(
         }
     }
 }
+
+#[derive(Component)]
+pub struct DayNightOverlay;

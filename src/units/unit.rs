@@ -16,13 +16,16 @@ use bevy::prelude::*;
 use bevy_transform_interpolation::prelude::TranslationInterpolation;
 use serde::{Deserialize, Serialize};
 
-pub const UNIT_REACH: f32 = 1.0;
-pub const UNIT_DEFAULT_SIZE: f32 = TILE_SIZE.x * 0.8;
-pub const UNIT_DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 5.0;
-pub const UNIT_LAYER: f32 = 1.0;
-
 #[derive(Component, Debug, Default, Serialize, Deserialize)]
 pub struct Unit;
+impl Unit {
+    pub const DEFAULT8REACH: f32 = 1.0;
+    pub const DEFAULT_SCALE_MULTIPLIER: f32 = 0.8;
+    pub const DEFAULT_SIZE: f32 = TILE_SIZE.x * Unit::DEFAULT_SCALE_MULTIPLIER;
+    pub const DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 5.0;
+    pub const DEFAULT_LAYER: f32 = 1.0;
+}
+
 #[derive(Bundle)]
 pub struct UnitBundle {
     pub name: Name,
@@ -41,7 +44,7 @@ impl UnitBundle {
             transform,
             direction: Direction::East,
             speed_stat,
-            collider: Collider::circle(UNIT_DEFAULT_SIZE / 2.0),
+            collider: Collider::circle(Unit::DEFAULT_SIZE / 2.0),
             linear_velocity: LinearVelocity::ZERO,
             translation_interpolation: TranslationInterpolation,
             unit: Unit,
@@ -53,7 +56,7 @@ impl UnitBundle {
 pub struct SpeedStat(pub f32);
 impl Default for SpeedStat {
     fn default() -> Self {
-        Self(UNIT_DEFAULT_MOVEMENT_SPEED)
+        Self(Unit::DEFAULT_MOVEMENT_SPEED)
     }
 }
 

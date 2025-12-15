@@ -1,5 +1,5 @@
 use crate::{
-    FixedSet, GameSet, UPS_TARGET,
+    FixedSet, GameSet,
     direction::Direction,
     items::{
         inventory::{InputInventory, ItemStack, OutputInventory},
@@ -10,11 +10,10 @@ use crate::{
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     structure::StructureBundle,
+    time::GameTime,
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};
 use std::f32::consts::{FRAC_PI_2, PI};
-
-pub const DEFAULT_ACTION_TIME_TICKS: u64 = UPS_TARGET as u64 * 1; // 1 second
 
 pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
@@ -43,10 +42,13 @@ pub struct Machine {
     pub action_speed: f32,
     pub action_progress_ticks: u64,
 }
+impl Machine {
+    pub const DEFAULT_ACTION_TIME_TICKS: u64 = GameTime::UPS_TARGET as u64 * 1; // 1 second
+}
 impl Default for Machine {
     fn default() -> Self {
         Self {
-            action_time_ticks: DEFAULT_ACTION_TIME_TICKS,
+            action_time_ticks: Self::DEFAULT_ACTION_TIME_TICKS,
             action_speed: 1.0,
             action_progress_ticks: 0,
         }
@@ -138,7 +140,7 @@ pub fn process_belt_machines_system(
         if machine.action_progress_ticks == 0 {
             if !input_inventory.0.slots.is_empty() {
                 machine.action_time_ticks =
-                    (DEFAULT_ACTION_TIME_TICKS as f32 / machine.action_speed) as u64;
+                    (Machine::DEFAULT_ACTION_TIME_TICKS as f32 / machine.action_speed) as u64;
                 // TODO: see if need to change to 0
                 machine.action_progress_ticks = 1;
             }
@@ -226,7 +228,7 @@ pub fn process_mining_machines_system(
         if let Some(mined_item) = mining_machine.mined_item {
             if machine.action_progress_ticks == 0 && output_inventory.0.enough_room(mined_item) {
                 machine.action_time_ticks =
-                    (DEFAULT_ACTION_TIME_TICKS as f32 / machine.action_speed) as u64;
+                    (Machine::DEFAULT_ACTION_TIME_TICKS as f32 / machine.action_speed) as u64;
                 // TODO: see if need to change to 0
                 machine.action_progress_ticks = 1;
             } else if machine.action_progress_ticks > 0 {

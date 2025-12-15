@@ -9,6 +9,8 @@ use crate::{
     },
 };
 
+pub const CURRENT_SAVE_VERSION: f32 = 1.0;
+pub const PATH_SAVES: &'static str = "saves";
 pub struct SavePlugin;
 
 impl Plugin for SavePlugin {

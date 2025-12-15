@@ -1,11 +1,9 @@
 use crate::{
     items::{ItemType, Quality, inventory::ItemStack},
-    structure::machine::DEFAULT_ACTION_TIME_TICKS,
+    structure::machine::Machine,
 };
 use bevy::ecs::resource::Resource;
 use std::collections::HashMap;
-
-const DEFAULT_CRAFT_TIME_TICKS: u64 = DEFAULT_ACTION_TIME_TICKS;
 
 // #[derive(Debug, Clone, PartialEq, Eq)]
 // pub struct RecipeItemStack {
@@ -18,6 +16,9 @@ pub struct Recipe {
     pub inputs: Vec<ItemStack>,
     pub outputs: Vec<ItemStack>,
     pub base_craft_time_ticks: u64,
+}
+impl Recipe {
+    const DEFAULT_CRAFT_TIME_TICKS: u64 = Machine::DEFAULT_ACTION_TIME_TICKS;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -45,7 +46,7 @@ impl Default for RecipeBook {
                     quantity: 1,
                     quality: Quality::Standard,
                 }],
-                base_craft_time_ticks: DEFAULT_CRAFT_TIME_TICKS,
+                base_craft_time_ticks: Recipe::DEFAULT_CRAFT_TIME_TICKS,
             },
         );
 
