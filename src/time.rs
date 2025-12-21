@@ -9,8 +9,7 @@ pub struct GameTime {
 
 impl GameTime {
     pub const UPS_TARGET: u64 = 30; // 30 ticks per second
-    // pub const TICKS_PER_DAY: u64 = Self::UPS_TARGET * 60 * 20; // 20 minutes
-    pub const TICKS_PER_DAY: u64 = Self::UPS_TARGET * 20; // 20 minutes
+    pub const TICKS_PER_DAY: u64 = Self::UPS_TARGET * 60 * 20; // 20 minutes
 
     pub const PERCENT_SUNRISE_START: f32 = 0.15;
     pub const PERCENT_MIDDLE_DAY: f32 = 0.25;

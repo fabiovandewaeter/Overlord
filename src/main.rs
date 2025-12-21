@@ -69,7 +69,11 @@ fn main() {
         .run();
 }
 
-fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut game_time: ResMut<GameTime>,
+) {
     // Audio
     commands.spawn((
         AudioPlayer::new(asset_server.load("audio/gentle-rain.ogg")),
@@ -97,6 +101,9 @@ fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
         ZIndex(100),                  // S'assure qu'il est au-dessus du jeu
         DayNightOverlay,
     ));
+
+    // start daytime in middle of the day
+    game_time.ticks = GameTime::TICKS_PER_DAY / 2;
 
     // Units + Player
     let player_texture_handle = asset_server.load("default.png");
