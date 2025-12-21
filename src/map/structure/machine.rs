@@ -8,8 +8,8 @@ use crate::{
     map::{
         CurrentMapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
+        structure::StructureBundle,
     },
-    structure::StructureBundle,
     time::GameTime,
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};

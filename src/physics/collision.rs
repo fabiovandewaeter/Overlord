@@ -4,10 +4,9 @@ use crate::{
     map::{
         CurrentMapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
+        structure::Structure,
     },
     physics::collision_event::Collision,
-    structure::Structure,
-    time::GameTime,
     units::Unit,
 };
 

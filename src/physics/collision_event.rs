@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::{
-    structure::{Wall, machine::Machine},
+    map::structure::{Wall, machine::Machine},
     time::GameTime,
 };
 
@@ -78,7 +78,7 @@ pub fn generic_collision_filter_handler(
 
     let current_tick = game_time.ticks;
 
-    let (last_seen, last_effect) = *collision_history
+    let (_, last_effect) = *collision_history
         .interactions
         .get(&event.entity)
         .unwrap_or(&(0, 0));

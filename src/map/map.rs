@@ -6,19 +6,21 @@ use crate::{
         inventory::{InputInventory, ItemStack, OutputInventory},
         recipe::RecipeId,
     },
-    map::coordinates::{
-        ChunkCoordinates, LocalTileCoordinates, TileCoordinates, absolute_coord_to_chunk_coord,
-        local_tile_coord_to_tile_coord, tile_coord_to_absolute_coord, tile_coord_to_chunk_coord,
-        tile_coord_to_local_tile_coord,
-    },
-    physics::collision_event::CollisionEffectCooldown,
-    structure::{
-        StructureBundle, Wall,
-        machine::{
-            BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
-            MachineBaseBundle, MiningMachine, MiningMachineBundle,
+    map::{
+        coordinates::{
+            ChunkCoordinates, LocalTileCoordinates, TileCoordinates, absolute_coord_to_chunk_coord,
+            local_tile_coord_to_tile_coord, tile_coord_to_absolute_coord,
+            tile_coord_to_chunk_coord, tile_coord_to_local_tile_coord,
+        },
+        structure::{
+            StructureBundle, Wall,
+            machine::{
+                BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
+                MachineBaseBundle, MachinePlugin, MiningMachine, MiningMachineBundle,
+            },
         },
     },
+    physics::collision_event::CollisionEffectCooldown,
     units::{Unit, pathfinding::RecalculateFlowField},
 };
 use bevy::{
@@ -32,9 +34,9 @@ pub const TILE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
 pub const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
 pub const TILE_LAYER: f32 = -1.0;
 pub const STRUCTURE_LAYER: f32 = 0.0;
-pub const SOURCE_LAYER: f32 = -0.1;
-pub const PATH_STRUCTURES_PNG: &'static str = "tiles/structures/";
-pub const PATH_SOURCES_PNG: &'static str = "tiles/sources/";
+pub const RESOURCE_NODE_LAYER: f32 = -0.1;
+pub const PATH_STRUCTURES_PNG: &'static str = "structures/";
+pub const PATH_SOURCES_PNG: &'static str = "tiles/resource_nodes/";
 pub const DEFAULT_CURRENT_MAP: &'static str = "DEFAULT_MAP";
 
 pub const DEFAULT_MAP_ID: MapId = MapId(0);
@@ -42,7 +44,8 @@ pub const DEFAULT_MAP_ID: MapId = MapId(0);
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(MultiMapManager::default())
+        app.add_plugins(MachinePlugin)
+            .insert_resource(MultiMapManager::default())
             .add_systems(PostStartup, spawn_first_chunk_system)
             .add_systems(
                 FixedUpdate,
@@ -59,7 +62,7 @@ impl Plugin for MapPlugin {
 
 /// a tile on the map where mining machine can extract ressources
 #[derive(Component)]
-pub struct Source(pub ItemStack);
+pub struct ResourceNode(pub ItemStack);
 
 #[derive(Component, Default, Debug)]
 pub struct StructureLayerManager {
@@ -68,8 +71,8 @@ pub struct StructureLayerManager {
 }
 
 #[derive(Component, Default, Debug)]
-pub struct SourceLayerManager {
-    /// LocalTileCoordinates -> Source entity
+pub struct ResourceNodeLayerManager {
+    /// LocalTileCoordinates -> ResourceNode entity
     pub sources: HashMap<LocalTileCoordinates, Entity>,
 }
 
@@ -165,7 +168,7 @@ pub fn spawn_one_chunk(
     let mut rng = rand::rng();
     // let chunk_coord = ChunkCoordinates { x: 0, y: 0 };
     let mut structure_layer_manager = StructureLayerManager::default();
-    let mut source_layer_manager = SourceLayerManager::default();
+    let mut resource_node_layer_manager = ResourceNodeLayerManager::default();
     for x in 0..CHUNK_SIZE.x {
         for y in 0..CHUNK_SIZE.y {
             let local_tile_coord = LocalTileCoordinates {
@@ -197,7 +200,7 @@ pub fn spawn_one_chunk(
                         .insert(local_tile_coord, wall_entity);
                 } else if is_source {
                     let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, SOURCE_LAYER);
+                        Transform::from_xyz(target_coord.x, target_coord.y, RESOURCE_NODE_LAYER);
                     let mut item_stack = ItemStack {
                         item_type: ItemType::IronOre,
                         quality: Quality::Standard,
@@ -216,11 +219,12 @@ pub fn spawn_one_chunk(
                             asset_server.load(PATH_SOURCES_PNG.to_owned() + "copper_ore.png"),
                         );
                     }
-                    let source_entity =
-                        commands.spawn((Source(item_stack), sprite, transform)).id();
-                    source_layer_manager
+                    let resource_node_entity = commands
+                        .spawn((ResourceNode(item_stack), sprite, transform))
+                        .id();
+                    resource_node_layer_manager
                         .sources
-                        .insert(local_tile_coord, source_entity);
+                        .insert(local_tile_coord, resource_node_entity);
 
                     if local_tile_coord.x < 5 && local_tile_coord.y < 5 {
                         let bundle = MiningMachineBundle {
@@ -357,7 +361,7 @@ pub fn spawn_one_chunk(
             },
             TilemapChunkTileData(tile_data),
             structure_layer_manager,
-            source_layer_manager,
+            resource_node_layer_manager,
             chunk_transform,
         ))
         .id();

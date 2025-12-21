@@ -1,6 +1,6 @@
 use crate::{
     items::{ItemType, Quality, inventory::ItemStack},
-    structure::machine::Machine,
+    map::structure::machine::Machine,
 };
 use bevy::ecs::resource::Resource;
 use std::collections::HashMap;

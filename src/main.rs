@@ -10,9 +10,9 @@ use overlord::{
     map::{
         self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
         coordinates::{Coordinates, coord_to_absolute_coord},
+        structure::machine::MachinePlugin,
     },
     physics::PhysicsPlugin,
-    structure::machine::MachinePlugin,
     time::{GameTime, day_night_cycle_system},
     units::{PlayerBundle, SpeedStat, Unit, UnitBundle, pathfinding::PathfindingPlugin},
 };
@@ -39,9 +39,8 @@ fn main() {
         .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(PhysicsPlugin)
-        .add_plugins(MapPlugin)
         .add_plugins(PathfindingPlugin)
-        .add_plugins(MachinePlugin)
+        .add_plugins(MapPlugin)
         // .add_plugins(SavePlugin)
         // .insert_resource(TimeState::default())
         .insert_resource(UpsCounter {
