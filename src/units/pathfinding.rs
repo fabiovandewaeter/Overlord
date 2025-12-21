@@ -1,7 +1,7 @@
 use crate::{
     FixedSet,
     map::{
-        MapManager, StructureLayerManager,
+        CurrentMapId, MapId, MapManager, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     units::{Player, player_control_system},
@@ -28,7 +28,30 @@ impl Plugin for PathfindingPlugin {
 
 #[derive(Resource, Default)]
 // pub struct FlowField(pub HashMap<TileCoordinates, Vec2>);
-pub struct FlowField(pub HashMap<TileCoordinates, TileCoordinates>);
+pub struct FlowField {
+    flow_field: HashMap<TileCoordinates, TileCoordinates>,
+    pub map_id: MapId,
+}
+impl FlowField {
+    pub fn get_next_tile(&self, current_tile_coords: &TileCoordinates) -> Option<&TileCoordinates> {
+        self.flow_field.get(&current_tile_coords)
+    }
+
+    pub fn clear(&mut self, new_map_id: MapId) {
+        self.flow_field.clear();
+        self.map_id = new_map_id;
+    }
+
+    pub fn insert(
+        &mut self,
+        current_tile: TileCoordinates,
+        next_tile: TileCoordinates,
+        new_map_id: MapId,
+    ) {
+        self.flow_field.insert(current_tile, next_tile);
+        self.map_id = new_map_id;
+    }
+}
 
 #[derive(Message, Default)]
 pub struct RecalculateFlowField;
@@ -36,8 +59,8 @@ pub struct RecalculateFlowField;
 pub fn calculate_flow_field_system(
     mut message_recalculate: MessageReader<RecalculateFlowField>,
     mut flow_field: ResMut<FlowField>,
-    map_manager: Res<MapManager>,
-    player_query: Query<&Transform, With<Player>>,
+    multi_map_manager: Res<MultiMapManager>,
+    player_query: Query<(&Transform, &CurrentMapId), With<Player>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
 ) {
     if message_recalculate.is_empty() {
@@ -45,8 +68,11 @@ pub fn calculate_flow_field_system(
     }
     message_recalculate.clear();
 
-    let Ok(transform) = player_query.single() else {
+    let Ok((transform, current_map_id)) = player_query.single() else {
         return;
+    };
+    let Some(map_manager) = multi_map_manager.maps.get(&current_map_id.0) else {
+        panic!();
     };
     let goal = absolute_coord_to_tile_coord((*transform).into());
 
@@ -110,7 +136,8 @@ pub fn calculate_flow_field_system(
         neighbors
     });
 
-    flow_field.0.clear();
+    // flow_field.0.clear();
+    flow_field.clear(current_map_id.0);
     for y in (goal.y - FLOWFIELD_RADIUS)..=(goal.y + FLOWFIELD_RADIUS) {
         for x in (goal.x - FLOWFIELD_RADIUS)..=(goal.x + FLOWFIELD_RADIUS) {
             let tile = TileCoordinates { x, y };
@@ -152,7 +179,8 @@ pub fn calculate_flow_field_system(
 
             // si on a trouvé un chemin vers le player
             if best_neighbor != tile {
-                flow_field.0.insert(tile, best_neighbor);
+                // flow_field.0.insert(tile, best_neighbor);
+                flow_field.insert(tile, best_neighbor, current_map_id.0);
             }
         }
     }

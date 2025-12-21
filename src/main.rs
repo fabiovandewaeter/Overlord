@@ -8,7 +8,7 @@ use overlord::{
     },
     items::recipe::RecipeBook,
     map::{
-        MapPlugin,
+        self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
         coordinates::{Coordinates, coord_to_absolute_coord},
     },
     physics::PhysicsPlugin,
@@ -73,6 +73,7 @@ fn setup_system(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut game_time: ResMut<GameTime>,
+    mut multi_map_manager: ResMut<MultiMapManager>,
 ) {
     // Audio
     commands.spawn((
@@ -105,6 +106,11 @@ fn setup_system(
     // start daytime in middle of the day
     game_time.ticks = GameTime::TICKS_PER_DAY / 2;
 
+    // maps
+    multi_map_manager
+        .maps
+        .insert(map::DEFAULT_MAP_ID, MapManager::default());
+
     // Units + Player
     let player_texture_handle = asset_server.load("default.png");
     let speed = SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED);
@@ -116,7 +122,12 @@ fn setup_system(
         Unit::DEFAULT_LAYER,
     );
     transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
-    let unit_bundle = UnitBundle::new(Name::new("Player"), transform, speed);
+    let unit_bundle = UnitBundle::new(
+        Name::new("Player"),
+        transform,
+        CurrentMapId(map::DEFAULT_MAP_ID),
+        speed,
+    );
     let bundle = PlayerBundle::new(unit_bundle);
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 
@@ -131,6 +142,7 @@ fn setup_system(
     let bundle = UnitBundle::new(
         Name::new("Monstre"),
         transform,
+        CurrentMapId(map::DEFAULT_MAP_ID),
         SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED),
     );
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));

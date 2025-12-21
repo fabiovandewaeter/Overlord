@@ -6,7 +6,7 @@ use crate::{
         recipe::{RecipeBook, RecipeId},
     },
     map::{
-        MapManager, StructureLayerManager,
+        CurrentMapId, MapManager, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     structure::StructureBundle,
@@ -246,13 +246,16 @@ pub fn transfert_items_to_next_machine_system(
         &Direction,
         Option<&mut InputInventory>,
         &mut OutputInventory,
+        &CurrentMapId,
     )>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
-    map_manager: Res<MapManager>,
+    multi_map_manager: Res<MultiMapManager>,
 ) {
     // we find all transfer pairs
     let mut transfer_pairs = Vec::new();
-    for (source_machine_entity, transform, _, direction, _, _) in machine_query.iter() {
+    for (source_machine_entity, transform, _, direction, _, _, current_map_id) in
+        machine_query.iter()
+    {
         let source_tile = absolute_coord_to_tile_coord((*transform).into());
         let delta = direction.direction_to_vec2();
         let target_tile = TileCoordinates {
@@ -260,8 +263,13 @@ pub fn transfert_items_to_next_machine_system(
             y: source_tile.y + delta.y,
         };
 
+        let Some(map_manager) = multi_map_manager.maps.get(&current_map_id.0) else {
+            panic!();
+        };
+
         if let Some(structure_entity) = map_manager.get_tile(target_tile, &chunk_query) {
-            if let Ok((target_machine_entity, _, _, _, _, _)) = machine_query.get(structure_entity)
+            if let Ok((target_machine_entity, _, _, _, _, _, _)) =
+                machine_query.get(structure_entity)
             {
                 transfer_pairs.push((source_machine_entity, target_machine_entity))
             }
@@ -272,8 +280,8 @@ pub fn transfert_items_to_next_machine_system(
     for (source_entity, target_entity) in transfer_pairs {
         let Ok(
             [
-                (_, _, _, _, _, mut source_output_inventory),
-                (_, _, _, _, mut target_input_inventory, _),
+                (_, _, _, _, _, mut source_output_inventory, _),
+                (_, _, _, _, mut target_input_inventory, _, _),
             ],
         ) = machine_query.get_many_mut([source_entity, target_entity])
         else {

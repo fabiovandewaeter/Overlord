@@ -36,10 +36,12 @@ pub const PATH_STRUCTURES_PNG: &'static str = "tiles/structures/";
 pub const PATH_SOURCES_PNG: &'static str = "tiles/sources/";
 pub const DEFAULT_CURRENT_MAP: &'static str = "DEFAULT_MAP";
 
+pub const DEFAULT_MAP_ID: MapId = MapId(0);
+
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(MapManager::default())
+        app.insert_resource(MultiMapManager::default())
             .add_systems(PostStartup, spawn_first_chunk_system)
             .add_systems(
                 FixedUpdate,
@@ -54,18 +56,37 @@ impl Plugin for MapPlugin {
     }
 }
 
+/// a tile on the map where mining machine can extract ressources
+#[derive(Component)]
+pub struct Source(pub ItemStack);
+
 #[derive(Component, Default, Debug)]
 pub struct StructureLayerManager {
-    pub structures: HashMap<LocalTileCoordinates, Entity>, // local TileCoordinates -> structure
+    /// LocalTileCoordinates -> Structure entity
+    pub structures: HashMap<LocalTileCoordinates, Entity>,
 }
 
 #[derive(Component, Default, Debug)]
 pub struct SourceLayerManager {
-    pub sources: HashMap<LocalTileCoordinates, Entity>, // local TileCoordinates -> source
+    /// LocalTileCoordinates -> Source entity
+    pub sources: HashMap<LocalTileCoordinates, Entity>,
+}
+
+#[derive(Default, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct MapId(pub u32);
+
+#[derive(Component, Default, Debug, Clone, Copy)]
+pub struct CurrentMapId(pub MapId);
+
+#[derive(Resource, Default)]
+pub struct MultiMapManager {
+    /// MapId -> MapManager
+    pub maps: HashMap<MapId, MapManager>,
 }
 
 /// Données spécifiques à chaque map
-#[derive(Resource, Default)]
+// #[derive(Resource, Default)]
+#[derive(Default)]
 pub struct MapManager {
     pub chunks: HashMap<ChunkCoordinates, Entity>,
 }
@@ -94,9 +115,6 @@ impl MapManager {
     }
 }
 
-#[derive(Component)]
-pub struct Source(pub ItemStack);
-
 fn update_tileset_image(
     chunk_query: Single<&TilemapChunk>,
     mut events: MessageReader<AssetEvent<Image>>,
@@ -114,14 +132,15 @@ fn update_tileset_image(
 pub fn spawn_first_chunk_system(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut map_manager: ResMut<MapManager>,
+    mut multi_map_manager: ResMut<MultiMapManager>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
     spawn_one_chunk(
         ChunkCoordinates { x: 0, y: 0 },
         &mut commands,
         &asset_server,
-        &mut map_manager,
+        &mut multi_map_manager,
+        MapId(0),
         &mut message_recalculate,
     );
 }
@@ -130,11 +149,16 @@ pub fn spawn_one_chunk(
     chunk_coord: ChunkCoordinates,
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    map_manager: &mut ResMut<MapManager>,
+    multi_map_manager: &mut ResMut<MultiMapManager>,
+    map_id: MapId,
     message_recalculate: &mut MessageWriter<RecalculateFlowField>,
 ) -> () {
+    let Some(map_manager) = multi_map_manager.maps.get_mut(&map_id) else {
+        panic!();
+    };
+
     if map_manager.chunks.contains_key(&chunk_coord) {
-        return;
+        panic!();
     }
     println!("spawn_one_chunk()");
     let mut rng = rand::rng();
@@ -330,19 +354,22 @@ pub fn spawn_one_chunk(
 }
 
 fn spawn_chunks_around_units_system(
-    unit_query: Query<&Transform, With<Unit>>,
-    mut map_manager: ResMut<MapManager>,
+    unit_query: Query<(&Transform, &CurrentMapId), With<Unit>>,
+    mut multi_map_manager: ResMut<MultiMapManager>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
     const SIZE: i32 = 2;
 
-    for unit_transform in unit_query.iter() {
+    for (unit_transform, current_map_id) in unit_query.iter() {
         let unit_chunk_coord = absolute_coord_to_chunk_coord((*unit_transform).into());
         for y in (unit_chunk_coord.y - SIZE)..(unit_chunk_coord.y + SIZE) {
             for x in (unit_chunk_coord.x - SIZE)..(unit_chunk_coord.x + SIZE) {
                 let chunk_coord = ChunkCoordinates { x, y };
+                let Some(map_manager) = multi_map_manager.maps.get_mut(&current_map_id.0) else {
+                    return;
+                };
                 if map_manager.chunks.contains_key(&chunk_coord) {
                     continue;
                 }
@@ -350,7 +377,8 @@ fn spawn_chunks_around_units_system(
                     chunk_coord,
                     &mut commands,
                     &asset_server,
-                    &mut map_manager,
+                    &mut multi_map_manager,
+                    current_map_id.0,
                     &mut message_recalculate,
                 );
             }

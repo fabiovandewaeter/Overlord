@@ -4,7 +4,7 @@ use crate::{
     // CURRENT_SAVE_VERSION, PATH_SAVES,
     direction::Direction,
     map::{
-        TILE_SIZE,
+        CurrentMapId, TILE_SIZE,
         coordinates::{
             AbsoluteCoordinates, absolute_coord_to_tile_coord, tile_coord_to_absolute_coord,
         },
@@ -30,6 +30,7 @@ impl Unit {
 pub struct UnitBundle {
     pub name: Name,
     pub transform: Transform,
+    pub current_map_id: CurrentMapId,
     pub direction: Direction,
     pub speed_stat: SpeedStat,
     pub collider: Collider,
@@ -38,10 +39,16 @@ pub struct UnitBundle {
     pub unit: Unit,
 }
 impl UnitBundle {
-    pub fn new(name: Name, transform: Transform, speed_stat: SpeedStat) -> Self {
+    pub fn new(
+        name: Name,
+        transform: Transform,
+        current_map_id: CurrentMapId,
+        speed_stat: SpeedStat,
+    ) -> Self {
         Self {
             name,
             transform,
+            current_map_id,
             direction: Direction::East,
             speed_stat,
             collider: Collider::circle(Unit::DEFAULT_SIZE / 2.0),
@@ -62,12 +69,16 @@ impl Default for SpeedStat {
 
 pub fn units_follow_field_system(
     mut unit_query: Query<
-        (&mut LinearVelocity, &Transform, &SpeedStat),
+        (&mut LinearVelocity, &Transform, &SpeedStat, &CurrentMapId),
         (With<Unit>, Without<Player>),
     >,
     flow_field: Res<FlowField>,
 ) {
-    for (mut linear_velocity, transform, speed_stat) in unit_query.iter_mut() {
+    for (mut linear_velocity, transform, speed_stat, current_map_id) in unit_query.iter_mut() {
+        if current_map_id.0 != flow_field.map_id {
+            continue;
+        }
+
         let current_pos_world = transform.translation.xy();
         let current_pos_abs = AbsoluteCoordinates {
             x: current_pos_world.x,
@@ -76,7 +87,7 @@ pub fn units_follow_field_system(
         let current_tile = absolute_coord_to_tile_coord(current_pos_abs);
 
         // Trouver la prochaine tuile cible depuis le flow field
-        if let Some(&next_tile) = flow_field.0.get(&current_tile) {
+        if let Some(&next_tile) = flow_field.get_next_tile(&current_tile) {
             // Calculer la position cible (le centre de la prochaine tuile)
             let target_pos_abs = tile_coord_to_absolute_coord(next_tile);
             let target_pos_world: Vec2 = target_pos_abs.into();

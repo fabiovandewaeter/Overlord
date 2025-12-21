@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite_render::TilemapChunk};
 
 use crate::{
     map::{
-        MapManager, StructureLayerManager,
+        CurrentMapId, MapManager, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     units::Unit,
@@ -185,23 +185,28 @@ impl Collider {
 
 /// Pour chaque paire, si chevauchement -> calcule la correction et applique moitié/moitié.
 pub fn collision_resolution_system(
-    mut unit_query: Query<(Entity, &mut Transform, &Collider), With<Unit>>,
+    mut unit_query: Query<(Entity, &mut Transform, &Collider, &CurrentMapId), With<Unit>>,
     structure_query: Query<(&Transform, &Collider), (Without<Unit>, With<Immovable>)>,
-    map_manager: Res<MapManager>,
+    multi_map_manager: Res<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>, // mut query: Query<(Entity, &mut Transform, &Collider, Has<Immovable>)>,
 ) {
     // Collecte les données des unités pour le test Unité vs Unité
-    let mut units_data: Vec<(Entity, Vec2, Collider)> = unit_query
+    let mut units_data: Vec<(Entity, Vec2, Collider, CurrentMapId)> = unit_query
         .iter()
-        .map(|(e, t, c)| (e, t.translation.truncate(), c.clone()))
+        .map(|(e, t, c, cm)| (e, t.translation.truncate(), c.clone(), cm.clone()))
         .collect();
 
     // --- PARTIE 1 : Unité vs Unité (Dynamique vs Dynamique) ---
     // On garde la boucle ici car le nombre d'unités est généralement faible (< 100)
     for i in 0..units_data.len() {
         for j in (i + 1)..units_data.len() {
-            let (_, pos_i, col_i) = &units_data[i];
-            let (_, pos_j, col_j) = &units_data[j];
+            let (_, pos_i, col_i, curr_m_i) = &units_data[i];
+            let (_, pos_j, col_j, curr_m_j) = &units_data[j];
+
+            // if on different map, skip
+            if curr_m_i.0 != curr_m_j.0 {
+                continue;
+            }
 
             if col_i.overlaps(*pos_i, col_j, *pos_j) {
                 let correction = col_i.resolve_overlap(*pos_i, col_j, *pos_j);
@@ -216,7 +221,7 @@ pub fn collision_resolution_system(
 
     // --- PARTIE 2 : Unité vs Environnement (Grid Lookup) ---
     // Au lieu de boucler sur 1000 murs, on regarde juste les 9 cases autour de l'unité
-    for (_, (_, pos, collider)) in units_data.iter_mut().enumerate() {
+    for (_, (_, pos, collider, current_map_id)) in units_data.iter_mut().enumerate() {
         // Convertir la position absolue en coordonnées de tuile
         let center_tile =
             absolute_coord_to_tile_coord(crate::map::coordinates::AbsoluteCoordinates {
@@ -230,6 +235,10 @@ pub fn collision_resolution_system(
                 let check_tile = TileCoordinates {
                     x: center_tile.x + x,
                     y: center_tile.y + y,
+                };
+
+                let Some(map_manager) = multi_map_manager.maps.get(&current_map_id.0) else {
+                    panic!();
                 };
 
                 // Utilisation du MapManager pour récupérer l'entité sur cette case (O(1))
@@ -254,8 +263,8 @@ pub fn collision_resolution_system(
 
     // --- APPLICATION ---
     // On applique les nouvelles positions aux Transforms des unités uniquement
-    for (entity, new_pos, _) in units_data {
-        if let Ok((_, mut transform, _)) = unit_query.get_mut(entity) {
+    for (entity, new_pos, _, _) in units_data {
+        if let Ok((_, mut transform, _, _)) = unit_query.get_mut(entity) {
             transform.translation.x = new_pos.x;
             transform.translation.y = new_pos.y;
         }
