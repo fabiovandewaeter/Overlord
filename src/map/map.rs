@@ -11,6 +11,7 @@ use crate::{
         local_tile_coord_to_tile_coord, tile_coord_to_absolute_coord, tile_coord_to_chunk_coord,
         tile_coord_to_local_tile_coord,
     },
+    physics::collision_event::CollisionEffectCooldown,
     structure::{
         StructureBundle, Wall,
         machine::{
@@ -180,7 +181,8 @@ pub fn spawn_one_chunk(
                 if is_wall {
                     let transform =
                         Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
-                    let bundle = StructureBundle::new(transform);
+                    let bundle =
+                        StructureBundle::new(transform, CollisionEffectCooldown::EVERY_SECOND);
                     let wall_entity = commands
                         .spawn((
                             bundle,
@@ -225,7 +227,10 @@ pub fn spawn_one_chunk(
                             base: MachineBaseBundle {
                                 name: Name::new("Mining machine"),
                                 // structure: Structure,
-                                structure_bundle: StructureBundle::new(transform),
+                                structure_bundle: StructureBundle::new(
+                                    transform,
+                                    CollisionEffectCooldown::EVERY_SECOND,
+                                ),
                                 direction: Direction::North,
                                 // transform,
                                 machine: Machine::default(),
@@ -265,7 +270,10 @@ pub fn spawn_one_chunk(
         base: MachineBaseBundle {
             name: Name::new("Belt machine"),
             // structure: Structure,
-            structure_bundle: StructureBundle::new(transform),
+            structure_bundle: StructureBundle::new(
+                transform,
+                CollisionEffectCooldown::EVERY_SECOND,
+            ),
             direction: Direction::North,
             // transform,
             machine: Machine::default(),
@@ -293,7 +301,10 @@ pub fn spawn_one_chunk(
         base: MachineBaseBundle {
             name: Name::new("Crafting machine"),
             // structure: Structure,
-            structure_bundle: StructureBundle::new(transform),
+            structure_bundle: StructureBundle::new(
+                transform,
+                CollisionEffectCooldown::EVERY_SECOND,
+            ),
             direction: Direction::South,
             // transform,
             machine: Machine::default(),

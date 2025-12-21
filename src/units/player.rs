@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     direction::Direction,
-    movement::LinearVelocity,
+    physics::movement::LinearVelocity,
     units::{SpeedStat, UnitBundle, pathfinding::RecalculateFlowField},
 };
 

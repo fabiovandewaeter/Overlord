@@ -6,7 +6,7 @@ use crate::{
         recipe::{RecipeBook, RecipeId},
     },
     map::{
-        CurrentMapId, MapManager, MultiMapManager, StructureLayerManager,
+        CurrentMapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     structure::StructureBundle,
@@ -43,7 +43,7 @@ pub struct Machine {
     pub action_progress_ticks: u64,
 }
 impl Machine {
-    pub const DEFAULT_ACTION_TIME_TICKS: u64 = GameTime::UPS_TARGET as u64 * 1; // 1 second
+    pub const DEFAULT_ACTION_TIME_TICKS: u64 = GameTime::TICKS_PER_SECOND as u64 * 1; // 1 second
 }
 impl Default for Machine {
     fn default() -> Self {

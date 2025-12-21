@@ -1,11 +1,15 @@
-use bevy::{
-    app::{FixedUpdate, Plugin},
-    ecs::schedule::IntoScheduleConfigs,
-};
+use bevy::prelude::*;
 
 use crate::{
     FixedSet,
-    movement::{apply_velocity_system, collision::collision_resolution_system},
+    physics::{
+        collision::collision_resolution_system,
+        collision_event::{
+            cleanup_collision_history_system, generic_collision_filter_handler,
+            machine_hit_handler, wall_hit_handler,
+        },
+        movement::apply_velocity_system,
+    },
     units::{player_control_system, units_follow_field_system},
 };
 
@@ -24,9 +28,15 @@ impl Plugin for PhysicsPlugin {
                         .before(apply_velocity_system),
                 ),
                 apply_velocity_system.in_set(FixedSet::Movement),
+                cleanup_collision_history_system
+                    .in_set(FixedSet::Collision)
+                    .before(collision_resolution_system),
                 collision_resolution_system.in_set(FixedSet::Collision),
             )
                 .chain(),
-        );
+        )
+        .add_observer(generic_collision_filter_handler)
+        .add_observer(machine_hit_handler)
+        .add_observer(wall_hit_handler);
     }
 }

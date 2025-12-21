@@ -9,7 +9,7 @@ use crate::{
             AbsoluteCoordinates, absolute_coord_to_tile_coord, tile_coord_to_absolute_coord,
         },
     },
-    movement::{LinearVelocity, collision::Collider},
+    physics::{collision::Collider, collision_event::CollisionHistory, movement::LinearVelocity},
     units::{pathfinding::FlowField, player::Player},
 };
 use bevy::prelude::*;
@@ -36,6 +36,7 @@ pub struct UnitBundle {
     pub collider: Collider,
     pub linear_velocity: LinearVelocity,
     pub translation_interpolation: TranslationInterpolation,
+    pub collision_history: CollisionHistory,
     pub unit: Unit,
 }
 impl UnitBundle {
@@ -54,6 +55,7 @@ impl UnitBundle {
             collider: Collider::circle(Unit::DEFAULT_SIZE / 2.0),
             linear_velocity: LinearVelocity::ZERO,
             translation_interpolation: TranslationInterpolation,
+            collision_history: CollisionHistory::default(),
             unit: Unit,
         }
     }

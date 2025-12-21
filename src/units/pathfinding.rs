@@ -1,7 +1,7 @@
 use crate::{
     FixedSet,
     map::{
-        CurrentMapId, MapId, MapManager, MultiMapManager, StructureLayerManager,
+        CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     units::{Player, player_control_system},
