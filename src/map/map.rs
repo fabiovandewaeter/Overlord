@@ -278,6 +278,26 @@ pub fn spawn_one_chunk(
                             .structures
                             .insert(local_tile_coord, machine_entity);
                     }
+                } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
+                    let transform =
+                        Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
+                    let bundle = PortalBundle::new(
+                        "Portail vers (0, 0)".into(),
+                        transform,
+                        DEFAULT_MAP_ID,
+                        TileCoordinates { x: 0, y: 0 },
+                    );
+                    let portal_entity = commands
+                        .spawn((
+                            bundle,
+                            Sprite::from_image(
+                                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "portal.png"),
+                            ),
+                        ))
+                        .id();
+                    structure_layer_manager
+                        .structures
+                        .insert(local_tile_coord, portal_entity);
                 } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
                     let transform =
                         Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
