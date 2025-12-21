@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bevy::{prelude::*, sprite_render::TilemapChunk};
 
 use crate::{
@@ -8,12 +6,13 @@ use crate::{
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
     },
     physics::collision_event::Collision,
+    structure::Structure,
     time::GameTime,
     units::Unit,
 };
 
 #[derive(Component)]
-pub struct Immovable;
+pub struct Passable;
 
 #[derive(Component, Debug, Clone)]
 pub enum Collider {
@@ -190,7 +189,11 @@ impl Collider {
 /// Pour chaque paire, si chevauchement -> calcule la correction et applique moitié/moitié.
 pub fn collision_resolution_system(
     mut unit_query: Query<(Entity, &mut Transform, &Collider, &CurrentMapId), With<Unit>>,
-    structure_query: Query<(Entity, &Transform, &Collider), (Without<Unit>, With<Immovable>)>,
+    // structure_query: Query<(Entity, &Transform, &Collider), (Without<Unit>, With<Immovable>)>,
+    structure_query: Query<
+        (Entity, &Transform, &Collider, Has<Passable>),
+        (Without<Unit>, With<Structure>),
+    >,
     multi_map_manager: Res<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>, // mut query: Query<(Entity, &mut Transform, &Collider, Has<Immovable>)>,
     mut commands: Commands,
@@ -249,7 +252,7 @@ pub fn collision_resolution_system(
                 // Utilisation du MapManager pour récupérer l'entité sur cette case (O(1))
                 if let Some(structure_entity) = map_manager.get_tile(check_tile, &chunk_query) {
                     // Si on trouve une structure, on récupère son Collider et Transform
-                    if let Ok((struct_entity, struct_transform, struct_collider)) =
+                    if let Ok((struct_entity, struct_transform, struct_collider, is_passable)) =
                         structure_query.get(structure_entity)
                     {
                         let struct_pos = struct_transform.translation.truncate();
@@ -259,10 +262,13 @@ pub fn collision_resolution_system(
                                 entity: struct_entity,
                                 source: *unit_entity,
                             });
-                            let correction =
-                                collider.resolve_overlap(*pos, struct_collider, struct_pos);
-                            // L'unité bouge, le mur est Immovable -> 100% de la correction sur l'unité
-                            *pos += correction;
+
+                            if !is_passable {
+                                let correction =
+                                    collider.resolve_overlap(*pos, struct_collider, struct_pos);
+                                // L'unité bouge, le mur est Immovable -> 100% de la correction sur l'unité
+                                *pos += correction;
+                            }
                         }
                     }
                 }

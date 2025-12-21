@@ -5,10 +5,7 @@ use bevy::{
 
 use crate::{
     map::TILE_SIZE,
-    physics::{
-        collision::{Collider, Immovable},
-        collision_event::CollisionEffectCooldown,
-    },
+    physics::{collision::Collider, collision_event::CollisionEffectCooldown},
 };
 
 #[derive(Component, Default)]
@@ -17,7 +14,6 @@ pub struct Structure;
 pub struct StructureBundle {
     pub collider: Collider,
     pub transform: Transform,
-    pub immovable: Immovable,
     pub collision_effect_cooldown: CollisionEffectCooldown,
     pub structure: Structure,
 }
@@ -26,7 +22,6 @@ impl StructureBundle {
         Self {
             collider: Collider::rectangle(TILE_SIZE.x, TILE_SIZE.y),
             transform,
-            immovable: Immovable,
             collision_effect_cooldown,
             structure: Structure,
         }
