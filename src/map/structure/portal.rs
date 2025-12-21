@@ -1,8 +1,17 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite_render::TilemapChunk};
 
 use crate::{
-    map::{MapId, coordinates::TileCoordinates, structure::StructureBundle},
-    physics::{collision::Passable, collision_event::CollisionEffectCooldown},
+    map::{
+        CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
+        coordinates::{TileCoordinates, tile_coord_to_absolute_coord},
+        structure::StructureBundle,
+    },
+    physics::{
+        collision::Passable,
+        collision_event::{ApplyCollisionEffect, CollisionEffectCooldown, CollisionHistory},
+    },
+    time::GameTime,
+    units::{Unit, pathfinding::RecalculateFlowField},
 };
 
 #[derive(Component)]
@@ -34,4 +43,57 @@ impl PortalBundle {
             },
         }
     }
+}
+
+pub fn portal_collision_handler(
+    event: On<ApplyCollisionEffect>,
+    mut multi_map_manager: ResMut<MultiMapManager>,
+    chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
+    portal_query: Query<&Portal>,
+    mut unit_query: Query<(&mut Transform, &mut CurrentMapId, &mut CollisionHistory), With<Unit>>,
+    game_time: Res<GameTime>,
+
+    asset_server: Res<AssetServer>,
+    mut commands: Commands,
+    mut message_recalculate: MessageWriter<RecalculateFlowField>,
+) {
+    let Ok(portal) = portal_query.get(event.entity) else {
+        return;
+    };
+    let Ok((mut unit_transform, mut unit_current_map_id, mut collision_history)) =
+        unit_query.get_mut(event.source)
+    else {
+        return;
+    };
+
+    let Some(destination_map_manager) = multi_map_manager.maps.get_mut(&portal.destination_map_id)
+    else {
+        return;
+    };
+
+    if let Some(target_portal_entity) = destination_map_manager.spawn_chunk_and_get_structure(
+        portal.destination_tile_pos,
+        &chunk_query,
+        &asset_server,
+        &mut commands,
+        &mut message_recalculate,
+    ) {
+        // make sure the target_portal doesn't teleport back the unit instantly
+        if portal_query.get(target_portal_entity).is_ok() {
+            let current_tick = game_time.ticks;
+            collision_history
+                .interactions
+                .insert(target_portal_entity, (current_tick, current_tick));
+        }
+    }
+
+    println!(
+        "portal_collision_handler: teleport unit from {:?} to map {:?} and tile coords {:?}",
+        unit_transform, portal.destination_map_id, portal.destination_tile_pos
+    );
+
+    unit_current_map_id.0 = portal.destination_map_id;
+    let target_absolute_pos = tile_coord_to_absolute_coord(portal.destination_tile_pos);
+    unit_transform.translation.x = target_absolute_pos.x;
+    unit_transform.translation.y = target_absolute_pos.y;
 }

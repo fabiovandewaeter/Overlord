@@ -2,11 +2,12 @@ use bevy::prelude::*;
 
 use crate::{
     FixedSet,
+    map::structure::portal::portal_collision_handler,
     physics::{
         collision::collision_resolution_system,
         collision_event::{
             cleanup_collision_history_system, generic_collision_filter_handler,
-            machine_hit_handler, wall_hit_handler,
+            machine_collision_handler, wall_collision_handler,
         },
         movement::apply_velocity_system,
     },
@@ -36,7 +37,8 @@ impl Plugin for PhysicsPlugin {
                 .chain(),
         )
         .add_observer(generic_collision_filter_handler)
-        .add_observer(machine_hit_handler)
-        .add_observer(wall_hit_handler);
+        .add_observer(machine_collision_handler)
+        .add_observer(wall_collision_handler)
+        .add_observer(portal_collision_handler);
     }
 }

@@ -18,6 +18,7 @@ use crate::{
                 BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
                 MachineBaseBundle, MachinePlugin, MiningMachine, MiningMachineBundle,
             },
+            portal::PortalBundle,
         },
     },
     physics::collision_event::CollisionEffectCooldown,
@@ -95,7 +96,7 @@ pub struct MapManager {
     pub chunks: HashMap<ChunkCoordinates, Entity>,
 }
 impl MapManager {
-    pub fn get_tile(
+    pub fn get_structure(
         &self,
         tile: TileCoordinates,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
@@ -110,12 +111,42 @@ impl MapManager {
         None
     }
 
+    // TODO: try to load from save before spawning a new chunk
+    pub fn spawn_chunk_and_get_structure(
+        &mut self,
+        tile: TileCoordinates,
+        chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
+        asset_server: &Res<AssetServer>,
+        commands: &mut Commands,
+        message_recalculate: &mut MessageWriter<RecalculateFlowField>,
+    ) -> Option<Entity> {
+        let chunk_coord = tile_coord_to_chunk_coord(tile);
+
+        if let Some(chunk_entity) = self.chunks.get(&chunk_coord) {
+            if let Ok(structure_manager) = chunk_query.get(*chunk_entity) {
+                let local_tile = tile_coord_to_local_tile_coord(tile, chunk_coord);
+                return structure_manager.structures.get(&local_tile).copied();
+            }
+        }
+
+        // if the chunk doesn't exists, spawn a new one
+        spawn_one_chunk(
+            chunk_coord,
+            commands,
+            asset_server,
+            self,
+            message_recalculate,
+        );
+
+        self.get_structure(tile, chunk_query)
+    }
+
     pub fn is_tile_walkable(
         &self,
         tile: TileCoordinates,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
-        self.get_tile(tile, chunk_query).is_none()
+        self.get_structure(tile, chunk_query).is_none()
     }
 }
 
@@ -143,8 +174,7 @@ pub fn spawn_first_chunk_system(
         ChunkCoordinates { x: 0, y: 0 },
         &mut commands,
         &asset_server,
-        &mut multi_map_manager,
-        MapId(0),
+        multi_map_manager.maps.get_mut(&MapId(0)).unwrap(),
         &mut message_recalculate,
     );
 }
@@ -153,17 +183,10 @@ pub fn spawn_one_chunk(
     chunk_coord: ChunkCoordinates,
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    multi_map_manager: &mut ResMut<MultiMapManager>,
-    map_id: MapId,
+    // multi_map_manager: &mut ResMut<MultiMapManager>,
+    map_manager: &mut MapManager,
     message_recalculate: &mut MessageWriter<RecalculateFlowField>,
 ) -> () {
-    let Some(map_manager) = multi_map_manager.maps.get_mut(&map_id) else {
-        panic!();
-    };
-
-    if map_manager.chunks.contains_key(&chunk_coord) {
-        panic!();
-    }
     println!("spawn_one_chunk()");
     let mut rng = rand::rng();
     // let chunk_coord = ChunkCoordinates { x: 0, y: 0 };
@@ -255,6 +278,26 @@ pub fn spawn_one_chunk(
                             .structures
                             .insert(local_tile_coord, machine_entity);
                     }
+                } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
+                    let transform =
+                        Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
+                    let bundle = PortalBundle::new(
+                        "Portail vers (10, 10)".into(),
+                        transform,
+                        DEFAULT_MAP_ID,
+                        TileCoordinates { x: 10, y: 10 },
+                    );
+                    let portal_entity = commands
+                        .spawn((
+                            bundle,
+                            Sprite::from_image(
+                                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "portal.png"),
+                            ),
+                        ))
+                        .id();
+                    structure_layer_manager
+                        .structures
+                        .insert(local_tile_coord, portal_entity);
                 }
             }
         }
@@ -392,8 +435,7 @@ fn spawn_chunks_around_units_system(
                     chunk_coord,
                     &mut commands,
                     &asset_server,
-                    &mut multi_map_manager,
-                    current_map_id.0,
+                    multi_map_manager.maps.get_mut(&current_map_id.0).unwrap(),
                     &mut message_recalculate,
                 );
             }

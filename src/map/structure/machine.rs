@@ -267,7 +267,7 @@ pub fn transfert_items_to_next_machine_system(
             panic!();
         };
 
-        if let Some(structure_entity) = map_manager.get_tile(target_tile, &chunk_query) {
+        if let Some(structure_entity) = map_manager.get_structure(target_tile, &chunk_query) {
             if let Ok((target_machine_entity, _, _, _, _, _, _)) =
                 machine_query.get(structure_entity)
             {

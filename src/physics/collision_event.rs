@@ -119,19 +119,19 @@ pub fn generic_collision_filter_handler(
     }
 }
 
-pub fn machine_hit_handler(
+pub fn machine_collision_handler(
     event: On<ApplyCollisionEffect>,
     query: Query<&CollisionEffectCooldown, With<Machine>>,
 ) {
     if query.get(event.entity).is_err() {
         return;
     }
-    println!("machine_hit_handler");
+    println!("machine_collision_handler");
 }
 
-pub fn wall_hit_handler(event: On<ApplyCollisionEffect>, query: Query<(), With<Wall>>) {
+pub fn wall_collision_handler(event: On<ApplyCollisionEffect>, query: Query<(), With<Wall>>) {
     if query.get(event.entity).is_err() {
         return;
     }
-    println!("wall_hit_handler");
+    println!("wall_collision_handler");
 }

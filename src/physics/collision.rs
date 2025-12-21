@@ -249,7 +249,8 @@ pub fn collision_resolution_system(
                 };
 
                 // Utilisation du MapManager pour récupérer l'entité sur cette case (O(1))
-                if let Some(structure_entity) = map_manager.get_tile(check_tile, &chunk_query) {
+                if let Some(structure_entity) = map_manager.get_structure(check_tile, &chunk_query)
+                {
                     // Si on trouve une structure, on récupère son Collider et Transform
                     if let Ok((struct_entity, struct_transform, struct_collider, is_passable)) =
                         structure_query.get(structure_entity)

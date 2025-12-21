@@ -10,7 +10,6 @@ use overlord::{
     map::{
         self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
         coordinates::{Coordinates, coord_to_absolute_coord},
-        structure::machine::MachinePlugin,
     },
     physics::PhysicsPlugin,
     time::{GameTime, day_night_cycle_system},
