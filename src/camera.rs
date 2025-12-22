@@ -1,5 +1,9 @@
-use crate::{map::TILE_SIZE, units::Player};
+use crate::{
+    map::{CurrentMapId, MapRoot, MultiMapManager, TILE_SIZE},
+    units::Player,
+};
 use bevy::{
+    camera::visibility,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
@@ -30,45 +34,23 @@ impl CameraMovementKind {
     }
 }
 
-#[derive(Resource)]
-pub struct UpsCounter {
-    pub ticks: u32,
-    pub last_second: f64,
-    pub ups: u32,
-}
-
-pub fn display_fps_ups_system(
-    time: Res<Time>,
-    diagnostics: Res<DiagnosticsStore>,
-    mut counter: ResMut<UpsCounter>,
-) {
-    let now = time.elapsed_secs_f64();
-    if now - counter.last_second >= 1.0 {
-        // Calcule l’UPS
-        counter.ups = counter.ticks;
-        counter.ticks = 0;
-        counter.last_second = now;
-
-        // Récupère le FPS depuis le plugin
-        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-            if let Some(fps_avg) = fps.smoothed() {
-                println!("FPS: {:.0} | UPS: {}", fps_avg, counter.ups);
-            }
-        }
-    }
-}
-
 pub fn handle_camera_inputs_system(
     mut camera_query: Query<
-        (&mut Transform, &mut Projection, &mut CameraMovement),
+        (
+            &mut Transform,
+            &mut Projection,
+            &mut CameraMovement,
+            &mut CurrentMapId,
+        ),
         (With<Camera>, Without<Player>),
     >,
     input: Res<ButtonInput<KeyCode>>,
     mut input_mouse_wheel: MessageReader<MouseWheel>,
-    player_query: Query<&Transform, With<Player>>,
+    player_query: Query<(&Transform, &CurrentMapId), With<Player>>,
     time: Res<Time>,
 ) {
-    let Ok((mut camera_transform, mut projection, mut camera_movement)) = camera_query.single_mut()
+    let Ok((mut camera_transform, mut projection, mut camera_movement, mut camera_current_map_id)) =
+        camera_query.single_mut()
     else {
         return;
     };
@@ -77,7 +59,7 @@ pub fn handle_camera_inputs_system(
         camera_movement.0 = camera_movement.0.next();
     }
 
-    if let Ok(player_transform) = player_query.single() {
+    if let Ok((player_transform, player_current_map_id)) = player_query.single() {
         match camera_movement.0 {
             CameraMovementKind::SmoothFollowPlayer => {
                 let Vec3 { x, y, .. } = player_transform.translation;
@@ -86,9 +68,11 @@ pub fn handle_camera_inputs_system(
                 camera_transform.translation = camera_transform
                     .translation
                     .lerp(target, (smoothness * time.delta_secs()).min(1.0));
+                camera_current_map_id.0 = player_current_map_id.0;
             }
             CameraMovementKind::DirectFollowPlayer => {
                 camera_transform.translation = player_transform.translation;
+                camera_current_map_id.0 = player_current_map_id.0;
             }
             _ => (),
         }
@@ -153,5 +137,49 @@ pub fn handle_camera_inputs_system(
     }
 }
 
+pub fn update_map_visibility_system(
+    camera_query: Query<&CurrentMapId, (With<Camera>, Changed<CurrentMapId>)>,
+    mut map_root_query: Query<(&MapRoot, &mut Visibility)>,
+) {
+    if let Ok(camera_map_id) = camera_query.single() {
+        for (map_root, mut visibility) in map_root_query.iter_mut() {
+            if map_root.0 == camera_map_id.0 {
+                *visibility = Visibility::Inherited;
+                println!("inherited {:?}", map_root.0);
+            } else {
+                *visibility = Visibility::Hidden;
+                println!("hidden {:?}", map_root.0);
+            }
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct UpsCounter {
+    pub ticks: u32,
+    pub last_second: f64,
+    pub ups: u32,
+}
+
+pub fn display_fps_ups_system(
+    time: Res<Time>,
+    diagnostics: Res<DiagnosticsStore>,
+    mut counter: ResMut<UpsCounter>,
+) {
+    let now = time.elapsed_secs_f64();
+    if now - counter.last_second >= 1.0 {
+        // Calcule l’UPS
+        counter.ups = counter.ticks;
+        counter.ticks = 0;
+        counter.last_second = now;
+
+        // Récupère le FPS depuis le plugin
+        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(fps_avg) = fps.smoothed() {
+                println!("FPS: {:.0} | UPS: {}", fps_avg, counter.ups);
+            }
+        }
+    }
+}
 #[derive(Component)]
 pub struct DayNightOverlay;

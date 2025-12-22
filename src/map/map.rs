@@ -29,7 +29,7 @@ use bevy::{
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
 use rand::Rng;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 pub const TILE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
 pub const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
@@ -38,7 +38,6 @@ pub const STRUCTURE_LAYER: f32 = 0.0;
 pub const RESOURCE_NODE_LAYER: f32 = -0.1;
 pub const PATH_STRUCTURES_PNG: &'static str = "structures/";
 pub const PATH_SOURCES_PNG: &'static str = "tiles/resource_nodes/";
-pub const DEFAULT_CURRENT_MAP: &'static str = "DEFAULT_MAP";
 
 pub const DEFAULT_MAP_ID: MapId = MapId(0);
 
@@ -83,19 +82,56 @@ pub struct MapId(pub u32);
 #[derive(Component, Default, Debug, Clone, Copy)]
 pub struct CurrentMapId(pub MapId);
 
+#[derive(Bundle)]
+pub struct ChunkBundle {
+    pub tilemap_chunk: TilemapChunk,
+    pub tilemap_chunk_tile_data: TilemapChunkTileData,
+    pub structure_layer_manager: StructureLayerManager,
+    pub resource_node_layer_manager: ResourceNodeLayerManager,
+    pub transform: Transform,
+}
+
 #[derive(Resource, Default)]
 pub struct MultiMapManager {
     /// MapId -> MapManager
     pub maps: HashMap<MapId, MapManager>,
 }
+impl MultiMapManager {
+    pub fn spawn_map_and_get_mut(
+        &mut self,
+        map_id: &MapId,
+        commands: &mut Commands,
+    ) -> &mut MapManager {
+        if self.maps.get_mut(map_id).is_none() {
+            self.maps
+                .insert(*map_id, MapManager::new(*map_id, commands));
+        };
 
-/// Données spécifiques à chaque map
-// #[derive(Resource, Default)]
-#[derive(Default)]
+        self.maps.get_mut(map_id).unwrap()
+    }
+}
+
+/// all chunks of the map are children of this entity; usefull to change visibility or despawn
+#[derive(Component)]
+pub struct MapRoot(pub MapId);
+
+// #[derive(Default)]
 pub struct MapManager {
-    pub chunks: HashMap<ChunkCoordinates, Entity>,
+    /// MapRoot; all chunks of the map are children of this entity; usefull to change visibility or despawn
+    root_entity: Entity,
+    chunks: HashMap<ChunkCoordinates, Entity>,
 }
 impl MapManager {
+    pub fn new(map_id: MapId, commands: &mut Commands) -> Self {
+        let root_entity = commands
+            .spawn((Transform::default(), Visibility::default(), MapRoot(map_id)))
+            .id();
+        Self {
+            root_entity,
+            chunks: HashMap::default(),
+        }
+    }
+
     pub fn get_structure(
         &self,
         tile: TileCoordinates,
@@ -147,6 +183,20 @@ impl MapManager {
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
         self.get_structure(tile, chunk_query).is_none()
+    }
+
+    pub fn insert_chunk_and_children(
+        &mut self,
+        chunk_coord: ChunkCoordinates,
+        chunk_entity: Entity,
+        children: &[Entity], // structures and resource nodes
+        commands: &mut Commands,
+    ) {
+        // make the chunk, structures and resource nodes children of root_entity
+        commands.entity(self.root_entity).add_child(chunk_entity);
+        commands.entity(self.root_entity).add_children(children);
+
+        self.chunks.insert(chunk_coord, chunk_entity);
     }
 }
 
@@ -284,7 +334,9 @@ pub fn spawn_one_chunk(
                     let bundle = PortalBundle::new(
                         "Portail vers (0, 0)".into(),
                         transform,
-                        DEFAULT_MAP_ID,
+                        // DEFAULT_MAP_ID,
+                        // FAUT faire en sorte que ça enlève la map où la camera est pas
+                        MapId(1),
                         TileCoordinates { x: 0, y: 0 },
                     );
                     let portal_entity = commands
@@ -414,21 +466,27 @@ pub fn spawn_one_chunk(
             }
         })
         .collect();
-    let chunk_entity = commands
-        .spawn((
-            TilemapChunk {
-                chunk_size: CHUNK_SIZE,
-                tile_display_size,
-                tileset: asset_server.load("textures/array_texture.png"),
-                ..default()
-            },
-            TilemapChunkTileData(tile_data),
-            structure_layer_manager,
-            resource_node_layer_manager,
-            chunk_transform,
-        ))
-        .id();
-    map_manager.chunks.insert(chunk_coord, chunk_entity);
+
+    let all_children: Vec<Entity> = structure_layer_manager
+        .structures
+        .values()
+        .copied()
+        .chain(resource_node_layer_manager.sources.values().copied())
+        .collect();
+    let chunk_bundle = ChunkBundle {
+        tilemap_chunk: TilemapChunk {
+            chunk_size: CHUNK_SIZE,
+            tile_display_size,
+            tileset: asset_server.load("textures/array_texture.png"),
+            ..default()
+        },
+        tilemap_chunk_tile_data: TilemapChunkTileData(tile_data),
+        structure_layer_manager,
+        resource_node_layer_manager,
+        transform: chunk_transform,
+    };
+    let chunk_entity = commands.spawn(chunk_bundle).id();
+    map_manager.insert_chunk_and_children(chunk_coord, chunk_entity, &all_children, commands);
 }
 
 fn spawn_chunks_around_units_system(
@@ -445,9 +503,8 @@ fn spawn_chunks_around_units_system(
         for y in (unit_chunk_coord.y - SIZE)..(unit_chunk_coord.y + SIZE) {
             for x in (unit_chunk_coord.x - SIZE)..(unit_chunk_coord.x + SIZE) {
                 let chunk_coord = ChunkCoordinates { x, y };
-                let Some(map_manager) = multi_map_manager.maps.get_mut(&current_map_id.0) else {
-                    return;
-                };
+                let map_manager = multi_map_manager.maps.get_mut(&current_map_id.0).unwrap();
+
                 if map_manager.chunks.contains_key(&chunk_coord) {
                     continue;
                 }

@@ -60,16 +60,11 @@ pub fn portal_collision_handler(
     let Ok(portal) = portal_query.get(event.entity) else {
         return;
     };
-    let Ok((mut unit_transform, mut unit_current_map_id, mut collision_history)) =
-        unit_query.get_mut(event.source)
-    else {
-        return;
-    };
+    let (mut unit_transform, mut unit_current_map_id, mut collision_history) =
+        unit_query.get_mut(event.source).unwrap();
 
-    let Some(destination_map_manager) = multi_map_manager.maps.get_mut(&portal.destination_map_id)
-    else {
-        return;
-    };
+    let destination_map_manager =
+        multi_map_manager.spawn_map_and_get_mut(&portal.destination_map_id, &mut commands);
 
     if let Some(target_portal_entity) = destination_map_manager.spawn_chunk_and_get_structure(
         portal.destination_tile_pos,
