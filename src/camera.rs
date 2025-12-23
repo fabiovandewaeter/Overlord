@@ -1,10 +1,8 @@
 use crate::{
-    map::{CurrentMapId, MapRoot, MultiMapManager, TILE_SIZE},
+    map::{CurrentMapId, MapRoot, TILE_SIZE},
     units::Player,
 };
 use bevy::{
-    camera::visibility,
-    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
 };
@@ -154,32 +152,5 @@ pub fn update_map_visibility_system(
     }
 }
 
-#[derive(Resource)]
-pub struct UpsCounter {
-    pub ticks: u32,
-    pub last_second: f64,
-    pub ups: u32,
-}
-
-pub fn display_fps_ups_system(
-    time: Res<Time>,
-    diagnostics: Res<DiagnosticsStore>,
-    mut counter: ResMut<UpsCounter>,
-) {
-    let now = time.elapsed_secs_f64();
-    if now - counter.last_second >= 1.0 {
-        // Calcule l’UPS
-        counter.ups = counter.ticks;
-        counter.ticks = 0;
-        counter.last_second = now;
-
-        // Récupère le FPS depuis le plugin
-        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-            if let Some(fps_avg) = fps.smoothed() {
-                println!("FPS: {:.0} | UPS: {}", fps_avg, counter.ups);
-            }
-        }
-    }
-}
 #[derive(Component)]
 pub struct DayNightOverlay;

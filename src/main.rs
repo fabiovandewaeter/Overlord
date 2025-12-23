@@ -3,8 +3,8 @@ use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use overlord::{
     FixedSet, GameSet,
     camera::{
-        CameraMovement, CameraMovementKind, DayNightOverlay, UpsCounter, display_fps_ups_system,
-        handle_camera_inputs_system, update_map_visibility_system,
+        CameraMovement, CameraMovementKind, DayNightOverlay, handle_camera_inputs_system,
+        update_map_visibility_system,
     },
     items::recipe::RecipeBook,
     map::{
@@ -12,7 +12,10 @@ use overlord::{
         coordinates::{Coordinates, coord_to_absolute_coord},
     },
     physics::PhysicsPlugin,
-    time::{GameTime, day_night_cycle_system},
+    time::{
+        GameTime, UpsCounter, day_night_cycle_system, display_fps_ups_system,
+        fixed_update_counter_system,
+    },
     units::{PlayerBundle, SpeedStat, Unit, UnitBundle, pathfinding::PathfindingPlugin},
 };
 
@@ -42,12 +45,8 @@ fn main() {
         .add_plugins(MapPlugin)
         // .add_plugins(SavePlugin)
         // .insert_resource(TimeState::default())
-        .insert_resource(UpsCounter {
-            ticks: 0,
-            last_second: 0.0,
-            ups: 0,
-        })
         .insert_resource(GameTime::default())
+        .insert_resource(UpsCounter::default())
         .insert_resource(RecipeBook::default())
         .insert_resource(Time::<Fixed>::from_hz(GameTime::UPS_TARGET as f64))
         .add_systems(Startup, setup_system)
@@ -147,12 +146,4 @@ fn setup_system(
         SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED),
     );
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
-}
-
-pub fn fixed_update_counter_system(
-    mut ups_counter: ResMut<UpsCounter>,
-    mut game_time: ResMut<GameTime>,
-) {
-    ups_counter.ticks += 1;
-    game_time.ticks += 1;
 }

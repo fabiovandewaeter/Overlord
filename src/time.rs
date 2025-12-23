@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    prelude::*,
+};
 
 use crate::camera::DayNightOverlay;
 
@@ -71,6 +74,43 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
 // Fonction de lissage pour des transitions plus naturelles (ease-in-out)
 fn smoothstep(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
+}
+
+/// UpsCounter is for diagnostic purpose only, not to be used as game time counter
+#[derive(Resource, Default)]
+pub struct UpsCounter {
+    pub ticks: u32,
+    pub last_second: f64,
+    pub ups: u32,
+}
+
+pub fn fixed_update_counter_system(
+    mut ups_counter: ResMut<UpsCounter>,
+    mut game_time: ResMut<GameTime>,
+) {
+    ups_counter.ticks += 1;
+    game_time.ticks += 1;
+}
+
+pub fn display_fps_ups_system(
+    time: Res<Time>,
+    diagnostics: Res<DiagnosticsStore>,
+    mut counter: ResMut<UpsCounter>,
+) {
+    let now = time.elapsed_secs_f64();
+    if now - counter.last_second >= 1.0 {
+        // Calcule l’UPS
+        counter.ups = counter.ticks;
+        counter.ticks = 0;
+        counter.last_second = now;
+
+        // Récupère le FPS depuis le plugin
+        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(fps_avg) = fps.smoothed() {
+                println!("FPS: {:.0} | UPS: {}", fps_avg, counter.ups);
+            }
+        }
+    }
 }
 
 // #[derive(Resource, Default)]
