@@ -15,7 +15,10 @@ pub struct SavePlugin;
 
 impl Plugin for SavePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (save_on_key_system, load_on_key_system));
+        app.add_systems(
+            Update,
+            (save_on_key_system, load_on_key_system).run_if(in_state(LoadingState::Ready)),
+        );
     }
 }
 

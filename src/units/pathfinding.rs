@@ -1,5 +1,6 @@
 use crate::{
     FixedSet,
+    loading::LoadingState,
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
@@ -21,7 +22,8 @@ impl Plugin for PathfindingPlugin {
                 FixedUpdate,
                 calculate_flow_field_system
                     .in_set(FixedSet::Process)
-                    .before(player_control_system),
+                    .before(player_control_system)
+                    .run_if(in_state(LoadingState::Ready)),
             );
     }
 }

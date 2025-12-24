@@ -3506,6 +3506,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_transform_interpolation",
+ "event-listener",
+ "futures-lite",
  "pathfinding",
  "rand",
  "serde",

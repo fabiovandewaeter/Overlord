@@ -6,6 +6,7 @@ use crate::{
         inventory::{InputInventory, ItemStack, OutputInventory},
         recipe::RecipeId,
     },
+    loading::LoadingState,
     map::{
         coordinates::{
             ChunkCoordinates, LocalTileCoordinates, TileCoordinates, absolute_coord_to_chunk_coord,
@@ -46,7 +47,8 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MachinePlugin)
             .insert_resource(MultiMapManager::default())
-            .add_systems(PostStartup, spawn_first_chunk_system)
+            //.add_systems(OnEnter(LoadingState::Ready), spawn_first_chunk_system)
+            //.add_systems(PostStartup, spawn_first_chunk_system)
             .add_systems(
                 FixedUpdate,
                 (
@@ -54,9 +56,14 @@ impl Plugin for MapPlugin {
                     spawn_chunks_around_units_system,
                 )
                     .chain()
-                    .in_set(FixedSet::Process),
+                    .in_set(FixedSet::Process)
+                    .run_if(in_state(LoadingState::Ready)),
             )
-            .add_systems(Update, update_tileset_image);
+            //.add_systems(
+                //Update,
+                //update_tileset_image.run_if(in_state(LoadingState::Ready)),
+            //);
+            ;
     }
 }
 
@@ -197,20 +204,6 @@ impl MapManager {
         commands.entity(self.root_entity).add_children(children);
 
         self.chunks.insert(chunk_coord, chunk_entity);
-    }
-}
-
-fn update_tileset_image(
-    chunk_query: Single<&TilemapChunk>,
-    mut events: MessageReader<AssetEvent<Image>>,
-    mut images: ResMut<Assets<Image>>,
-) {
-    let chunk = *chunk_query;
-    for event in events.read() {
-        if event.is_loaded_with_dependencies(chunk.tileset.id()) {
-            let image = images.get_mut(&chunk.tileset).unwrap();
-            image.reinterpret_stacked_2d_as_array(4);
-        }
     }
 }
 
@@ -478,6 +471,7 @@ pub fn spawn_one_chunk(
             chunk_size: CHUNK_SIZE,
             tile_display_size,
             tileset: asset_server.load("textures/array_texture.png"),
+            //tileset: tileset_handle.0.clone(), // UTILISE LE HANDLE PRÉ-CHARGÉ
             ..default()
         },
         tilemap_chunk_tile_data: TilemapChunkTileData(tile_data),

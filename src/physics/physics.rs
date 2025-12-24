@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     FixedSet,
+    loading::LoadingState,
     map::structure::portal::portal_collision_handler,
     physics::{
         collision::collision_resolution_system,
@@ -34,7 +35,8 @@ impl Plugin for PhysicsPlugin {
                     .before(collision_resolution_system),
                 collision_resolution_system.in_set(FixedSet::Collision),
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(LoadingState::Ready)),
         )
         .add_observer(generic_collision_filter_handler)
         .add_observer(machine_collision_handler)

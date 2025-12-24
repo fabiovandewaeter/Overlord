@@ -5,6 +5,7 @@ use crate::{
         inventory::{InputInventory, ItemStack, OutputInventory},
         recipe::{RecipeBook, RecipeId},
     },
+    loading::LoadingState,
     map::{
         CurrentMapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
@@ -31,7 +32,8 @@ impl Plugin for MachinePlugin {
                     // print_machine_inventories_system,
                 )
                     .chain()
-                    .in_set(FixedSet::Process),
+                    .in_set(FixedSet::Process)
+                    .run_if(in_state(LoadingState::Ready)),
             );
     }
 }

@@ -6,6 +6,7 @@ pub mod items;
 pub mod map;
 pub mod physics;
 // pub mod save;
+pub mod loading;
 pub mod time;
 pub mod units;
 

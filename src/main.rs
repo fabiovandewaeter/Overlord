@@ -7,9 +7,11 @@ use overlord::{
         update_map_visibility_system,
     },
     items::recipe::RecipeBook,
+    loading::{LoadingPlugin, LoadingState},
     map::{
         self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
         coordinates::{Coordinates, coord_to_absolute_coord},
+        spawn_first_chunk_system,
     },
     physics::PhysicsPlugin,
     time::{
@@ -38,6 +40,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        .add_plugins(LoadingPlugin)
         .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(PhysicsPlugin)
@@ -49,7 +52,11 @@ fn main() {
         .insert_resource(UpsCounter::default())
         .insert_resource(RecipeBook::default())
         .insert_resource(Time::<Fixed>::from_hz(GameTime::UPS_TARGET as f64))
-        .add_systems(Startup, setup_system)
+        //.add_systems(Startup, setup_system.run_if(in_state(LoadingState::Ready)))
+        .add_systems(
+            OnEnter(LoadingState::Ready),
+            (setup_system, spawn_first_chunk_system).chain(),
+        )
         .add_systems(
             Update,
             (
@@ -58,11 +65,13 @@ fn main() {
                 display_fps_ups_system.in_set(GameSet::UI),
                 day_night_cycle_system.in_set(GameSet::Visual),
                 // control_time_system,
-            ),
+            )
+                .run_if(in_state(LoadingState::Ready)),
         )
         .add_systems(
             FixedUpdate,
-            (fixed_update_counter_system.in_set(FixedSet::Process),),
+            (fixed_update_counter_system.in_set(FixedSet::Process),)
+                .run_if(in_state(LoadingState::Ready)),
         )
         .run();
 }
