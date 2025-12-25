@@ -143,10 +143,8 @@ pub fn update_map_visibility_system(
         for (map_root, mut visibility) in map_root_query.iter_mut() {
             if map_root.0 == camera_map_id.0 {
                 *visibility = Visibility::Inherited;
-                println!("inherited {:?}", map_root.0);
             } else {
                 *visibility = Visibility::Hidden;
-                println!("hidden {:?}", map_root.0);
             }
         }
     }
