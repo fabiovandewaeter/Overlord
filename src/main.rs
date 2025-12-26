@@ -1,5 +1,4 @@
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
-use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use overlord::{
     FixedSet, GameSet,
     camera::{
@@ -41,7 +40,6 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(LoadingPlugin)
-        .add_plugins(TransformInterpolationPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(PhysicsPlugin)
         .add_plugins(PathfindingPlugin)

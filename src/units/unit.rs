@@ -6,14 +6,14 @@ use crate::{
     map::{
         CurrentMapId, TILE_SIZE,
         coordinates::{
-            AbsoluteCoordinates, absolute_coord_to_tile_coord, tile_coord_to_absolute_coord,
+            AbsoluteCoordinates, GridPosition, absolute_coord_to_tile_coord,
+            tile_coord_to_absolute_coord,
         },
     },
-    physics::{collision::Collider, collision_event::CollisionHistory, movement::LinearVelocity},
+    physics::{collision_event::CollisionHistory, movement::DesiredMovement},
     units::{pathfinding::FlowField, player::Player},
 };
 use bevy::prelude::*;
-use bevy_transform_interpolation::prelude::TranslationInterpolation;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, Default, Serialize, Deserialize)]
@@ -30,32 +30,37 @@ impl Unit {
 pub struct UnitBundle {
     pub name: Name,
     pub transform: Transform,
+    pub grid_position: GridPosition,
     pub current_map_id: CurrentMapId,
     pub direction: Direction,
     pub speed_stat: SpeedStat,
-    pub collider: Collider,
-    pub linear_velocity: LinearVelocity,
-    pub translation_interpolation: TranslationInterpolation,
+    pub desired_movement: DesiredMovement,
     pub collision_history: CollisionHistory,
     pub unit: Unit,
 }
 impl UnitBundle {
     pub fn new(
         name: Name,
-        transform: Transform,
+        grid_position: GridPosition,
         current_map_id: CurrentMapId,
         speed_stat: SpeedStat,
     ) -> Self {
+        let absolute_coordinates = tile_coord_to_absolute_coord(grid_position.0);
+        let mut transform = Transform::from_xyz(
+            absolute_coordinates.x,
+            absolute_coordinates.y,
+            Unit::DEFAULT_LAYER,
+        );
+        transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
         Self {
             name,
             transform,
+            grid_position,
             current_map_id,
             direction: Direction::East,
             speed_stat,
-            collider: Collider::circle(Unit::DEFAULT_SIZE / 2.0),
-            linear_velocity: LinearVelocity::ZERO,
-            translation_interpolation: TranslationInterpolation,
             collision_history: CollisionHistory::default(),
+            desired_movement: DesiredMovement::default(),
             unit: Unit,
         }
     }

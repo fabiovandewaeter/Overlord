@@ -3,12 +3,12 @@ use bevy::{prelude::*, sprite_render::TilemapChunk};
 use crate::{
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
-        coordinates::{TileCoordinates, tile_coord_to_absolute_coord},
+        coordinates::{GridPosition, TileCoordinates, tile_coord_to_absolute_coord},
         structure::StructureBundle,
     },
     physics::{
-        collision::Passable,
         collision_event::{ApplyCollisionEffect, CollisionEffectCooldown, CollisionHistory},
+        movement::{DesiredMovement, Passable},
     },
     time::GameTime,
     units::{Unit, pathfinding::RecalculateFlowField},
@@ -29,13 +29,13 @@ pub struct PortalBundle {
 impl PortalBundle {
     pub fn new(
         name: Name,
-        transform: Transform,
+        grid_position: GridPosition,
         destination_map_id: MapId,
         destination_tile_pos: TileCoordinates,
     ) -> Self {
         Self {
             name,
-            structure_bundle: StructureBundle::new(transform, CollisionEffectCooldown::Never),
+            structure_bundle: StructureBundle::new(grid_position, CollisionEffectCooldown::Never),
             passable: Passable,
             portal: Portal {
                 destination_map_id,
@@ -50,7 +50,15 @@ pub fn portal_collision_handler(
     mut multi_map_manager: ResMut<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
-    mut unit_query: Query<(&mut Transform, &mut CurrentMapId, &mut CollisionHistory), With<Unit>>,
+    mut unit_query: Query<
+        (
+            &mut GridPosition,
+            &mut CurrentMapId,
+            &mut DesiredMovement,
+            &mut CollisionHistory,
+        ),
+        With<Unit>,
+    >,
     game_time: Res<GameTime>,
 
     asset_server: Res<AssetServer>,

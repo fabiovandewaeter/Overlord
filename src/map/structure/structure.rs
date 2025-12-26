@@ -4,24 +4,36 @@ use bevy::{
 };
 
 use crate::{
-    map::TILE_SIZE,
-    physics::{collision::Collider, collision_event::CollisionEffectCooldown},
+    map::{
+        RESOURCE_NODE_LAYER,
+        coordinates::{GridPosition, tile_coord_to_absolute_coord},
+    },
+    physics::collision_event::CollisionEffectCooldown,
 };
 
 #[derive(Component, Default)]
 pub struct Structure;
 #[derive(Bundle)]
 pub struct StructureBundle {
-    pub collider: Collider,
     pub transform: Transform,
+    pub grid_position: GridPosition,
     pub collision_effect_cooldown: CollisionEffectCooldown,
     pub structure: Structure,
 }
 impl StructureBundle {
-    pub fn new(transform: Transform, collision_effect_cooldown: CollisionEffectCooldown) -> Self {
+    pub fn new(
+        grid_position: GridPosition,
+        collision_effect_cooldown: CollisionEffectCooldown,
+    ) -> Self {
+        let absolute_coordinates = tile_coord_to_absolute_coord(grid_position.0);
+        let transform = Transform::from_xyz(
+            absolute_coordinates.x,
+            absolute_coordinates.y,
+            RESOURCE_NODE_LAYER,
+        );
         Self {
-            collider: Collider::rectangle(TILE_SIZE.x, TILE_SIZE.y),
             transform,
+            grid_position,
             collision_effect_cooldown,
             structure: Structure,
         }

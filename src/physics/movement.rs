@@ -1,38 +1,43 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite_render::TilemapChunk};
 
-#[derive(Component, Debug, Clone, Copy)]
-pub struct LinearVelocity {
-    pub x: f32,
-    pub y: f32,
+use crate::map::{
+    CurrentMapId, MultiMapManager, StructureLayerManager,
+    coordinates::{GridPosition, TileCoordinates},
+};
+
+#[derive(Component)]
+pub struct Passable;
+
+#[derive(Component)]
+pub struct DesiredMovement {
+    pub target: Option<TileCoordinates>,
 }
-
-impl LinearVelocity {
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0 };
-
-    pub fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-
-    pub fn as_vec2(&self) -> Vec2 {
-        Vec2::new(self.x, self.y)
-    }
-
-    pub fn length(&self) -> f32 {
-        (self.x * self.x + self.y * self.y).sqrt()
-    }
-
-    pub fn length_squared(&self) -> f32 {
-        self.x * self.x + self.y * self.y
+impl Default for DesiredMovement {
+    fn default() -> Self {
+        Self { target: None }
     }
 }
 
-pub fn apply_velocity_system(
-    mut query: Query<(&mut Transform, &LinearVelocity)>,
-    time: Res<Time<Fixed>>,
+pub fn apply_desired_movement(
+    mut query: Query<(&mut GridPosition, &mut DesiredMovement, &CurrentMapId)>,
+    other_query: Query<(&GridPosition, &DesiredMovement, &CurrentMapId)>,
+    chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
+    multi_map_manager: Res<MultiMapManager>,
 ) {
-    let dt = time.delta_secs();
-    for (mut transform, velocity) in query.iter_mut() {
-        transform.translation.x += velocity.x * dt;
-        transform.translation.y += velocity.y * dt;
+    for (mut grid_pos, mut desired_movement, current_map_id) in query.iter_mut() {
+        let Some(target_tile) = desired_movement.target else {
+            return;
+        };
+
+        let map_manager = multi_map_manager.maps.get(&current_map_id.0).unwrap();
+
+        let is_tile_occupied_by_unit =
+            other_query.iter().any(|(other_grid_pos, _, other_map_id)| {
+                other_map_id.0 == current_map_id.0 && other_grid_pos.0 == target_tile
+            });
+        if !map_manager.is_tile_walkable(target_tile, chunk_query) && !is_tile_occupied_by_unit {
+            grid_pos.0 = target_tile;
+            desired_movement.target = None;
+        }
     }
 }

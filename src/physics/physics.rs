@@ -4,13 +4,9 @@ use crate::{
     FixedSet,
     loading::LoadingState,
     map::structure::portal::portal_collision_handler,
-    physics::{
-        collision::collision_resolution_system,
-        collision_event::{
-            cleanup_collision_history_system, generic_collision_filter_handler,
-            machine_collision_handler, wall_collision_handler,
-        },
-        movement::apply_velocity_system,
+    physics::collision_event::{
+        cleanup_collision_history_system, generic_collision_filter_handler,
+        machine_collision_handler, wall_collision_handler,
     },
     units::{player_control_system, units_follow_field_system},
 };
@@ -22,18 +18,10 @@ impl Plugin for PhysicsPlugin {
             FixedUpdate,
             (
                 (
-                    player_control_system
-                        .in_set(FixedSet::Movement)
-                        .before(apply_velocity_system),
-                    units_follow_field_system
-                        .in_set(FixedSet::Movement)
-                        .before(apply_velocity_system),
+                    player_control_system.in_set(FixedSet::Movement),
+                    units_follow_field_system.in_set(FixedSet::Movement),
                 ),
-                apply_velocity_system.in_set(FixedSet::Movement),
-                cleanup_collision_history_system
-                    .in_set(FixedSet::Collision)
-                    .before(collision_resolution_system),
-                collision_resolution_system.in_set(FixedSet::Collision),
+                cleanup_collision_history_system.in_set(FixedSet::Collision),
             )
                 .chain()
                 .run_if(in_state(LoadingState::Ready)),

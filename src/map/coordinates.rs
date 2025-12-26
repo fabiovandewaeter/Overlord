@@ -1,6 +1,9 @@
-use bevy::{math::Vec2, transform::components::Transform};
+use bevy::prelude::*;
 
 use crate::map::{CHUNK_SIZE, TILE_SIZE};
+
+#[derive(Default, Component, Clone, Copy, PartialEq, Eq)]
+pub struct GridPosition(pub TileCoordinates);
 
 /// absolute_coord = (5.5 * TILE_SIZE.X, 0.5 * TILE_SIZE.y) | coord = (5.5, 0.5) | tile_coord = (5, 0)
 // #[derive(Component, Default, Debug, Clone, Copy, PartialEq)]
