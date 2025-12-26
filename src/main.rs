@@ -9,7 +9,7 @@ use overlord::{
     loading::{LoadingPlugin, LoadingState},
     map::{
         self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
-        coordinates::{Coordinates, GridPosition, coord_to_absolute_coord, coord_to_tile_coord},
+        coordinates::{Coordinates, GridPosition, coord_to_tile_coord},
         spawn_first_chunk_system,
     },
     physics::PhysicsPlugin,

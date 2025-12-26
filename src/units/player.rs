@@ -7,7 +7,7 @@ use crate::{
         coordinates::{GridPosition, TileCoordinates},
     },
     physics::movement::DesiredMovement,
-    units::{SpeedStat, UnitBundle, pathfinding::RecalculateFlowField},
+    units::{UnitBundle, pathfinding::RecalculateFlowField},
 };
 
 #[derive(Component)]
@@ -33,14 +33,13 @@ pub fn player_control_system(
             &CurrentMapId,
             &mut DesiredMovement,
             &mut Direction,
-            &SpeedStat,
         ),
         With<Player>,
     >,
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
-    let Ok((grid_pos, current_map_id, mut desired_movement, mut direction, speed_stat)) =
+    let Ok((grid_pos, current_map_id, mut desired_movement, mut direction)) =
         unit_query.single_mut()
     else {
         return;
