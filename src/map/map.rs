@@ -9,9 +9,10 @@ use crate::{
     loading::LoadingState,
     map::{
         coordinates::{
-            ChunkCoordinates, LocalTileCoordinates, TileCoordinates, absolute_coord_to_chunk_coord,
-            local_tile_coord_to_tile_coord, tile_coord_to_absolute_coord,
-            tile_coord_to_chunk_coord, tile_coord_to_local_tile_coord,
+            ChunkCoordinates, GridPosition, LocalTileCoordinates, TileCoordinates,
+            absolute_coord_to_chunk_coord, local_tile_coord_to_tile_coord,
+            tile_coord_to_absolute_coord, tile_coord_to_chunk_coord,
+            tile_coord_to_local_tile_coord,
         },
         structure::{
             StructureBundle, Wall,
@@ -246,12 +247,11 @@ pub fn spawn_one_chunk(
             let is_source = rng.random_bool(0.2);
             if (local_tile_coord.x > 2) && (local_tile_coord.y > 2) {
                 let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
-                let target_coord = tile_coord_to_absolute_coord(tile_coord);
                 if is_wall {
-                    let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
-                    let bundle =
-                        StructureBundle::new(transform, CollisionEffectCooldown::EVERY_SECOND);
+                    let bundle = StructureBundle::new(
+                        GridPosition(tile_coord),
+                        CollisionEffectCooldown::EVERY_SECOND,
+                    );
                     let wall_entity = commands
                         .spawn((
                             bundle,
@@ -265,6 +265,7 @@ pub fn spawn_one_chunk(
                         .structures
                         .insert(local_tile_coord, wall_entity);
                 } else if is_source {
+                    let target_coord = tile_coord_to_absolute_coord(tile_coord);
                     let transform =
                         Transform::from_xyz(target_coord.x, target_coord.y, RESOURCE_NODE_LAYER);
                     let mut item_stack = ItemStack {
@@ -298,7 +299,7 @@ pub fn spawn_one_chunk(
                                 name: Name::new("Mining machine"),
                                 // structure: Structure,
                                 structure_bundle: StructureBundle::new(
-                                    transform,
+                                    GridPosition(tile_coord),
                                     CollisionEffectCooldown::EVERY_SECOND,
                                 ),
                                 direction: Direction::North,
@@ -322,13 +323,9 @@ pub fn spawn_one_chunk(
                             .insert(local_tile_coord, machine_entity);
                     }
                 } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
-                    let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
                     let bundle = PortalBundle::new(
                         "Portail vers (0, 0)".into(),
-                        transform,
-                        // DEFAULT_MAP_ID,
-                        // FAUT faire en sorte que ça enlève la map où la camera est pas
+                        GridPosition(tile_coord),
                         MapId(1),
                         TileCoordinates { x: 0, y: 0 },
                     );
@@ -344,11 +341,9 @@ pub fn spawn_one_chunk(
                         .structures
                         .insert(local_tile_coord, portal_entity);
                 } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
-                    let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
                     let bundle = PortalBundle::new(
                         "Portail vers (10, 10)".into(),
-                        transform,
+                        GridPosition(tile_coord),
                         DEFAULT_MAP_ID,
                         TileCoordinates { x: 10, y: 10 },
                     );
@@ -370,8 +365,6 @@ pub fn spawn_one_chunk(
 
     let local_tile_coord = LocalTileCoordinates { x: 1, y: 1 };
     let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
-    let target_coord = tile_coord_to_absolute_coord(tile_coord);
-    let transform = Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
     let item_stack = ItemStack::new(ItemType::IronPlate, Quality::Perfect, 10);
     let mut input_inventory = InputInventory::default();
     input_inventory
@@ -383,7 +376,7 @@ pub fn spawn_one_chunk(
             name: Name::new("Belt machine"),
             // structure: Structure,
             structure_bundle: StructureBundle::new(
-                transform,
+                GridPosition(tile_coord),
                 CollisionEffectCooldown::EVERY_SECOND,
             ),
             direction: Direction::North,
@@ -407,14 +400,12 @@ pub fn spawn_one_chunk(
         .insert(local_tile_coord, machine_entity);
     let local_tile_coord = LocalTileCoordinates { x: 1, y: 0 };
     let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
-    let target_coord = tile_coord_to_absolute_coord(tile_coord);
-    let transform = Transform::from_xyz(target_coord.x, target_coord.y, STRUCTURE_LAYER);
     let bundle = CraftingMachineBundle {
         base: MachineBaseBundle {
             name: Name::new("Crafting machine"),
             // structure: Structure,
             structure_bundle: StructureBundle::new(
-                transform,
+                GridPosition(tile_coord),
                 CollisionEffectCooldown::EVERY_SECOND,
             ),
             direction: Direction::South,

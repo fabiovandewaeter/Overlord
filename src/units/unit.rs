@@ -5,10 +5,7 @@ use crate::{
     direction::Direction,
     map::{
         CurrentMapId, TILE_SIZE,
-        coordinates::{
-            AbsoluteCoordinates, GridPosition, absolute_coord_to_tile_coord,
-            tile_coord_to_absolute_coord,
-        },
+        coordinates::{GridPosition, tile_coord_to_absolute_coord},
     },
     physics::{collision_event::CollisionHistory, movement::DesiredMovement},
     units::{pathfinding::FlowField, player::Player},
@@ -76,40 +73,19 @@ impl Default for SpeedStat {
 
 pub fn units_follow_field_system(
     mut unit_query: Query<
-        (&mut LinearVelocity, &Transform, &SpeedStat, &CurrentMapId),
+        (&GridPosition, &mut DesiredMovement, &CurrentMapId),
         (With<Unit>, Without<Player>),
     >,
     flow_field: Res<FlowField>,
 ) {
-    for (mut linear_velocity, transform, speed_stat, current_map_id) in unit_query.iter_mut() {
+    for (grid_position, mut desired_movement, current_map_id) in unit_query.iter_mut() {
         if current_map_id.0 != flow_field.map_id {
             continue;
         }
 
-        let current_pos_world = transform.translation.xy();
-        let current_pos_abs = AbsoluteCoordinates {
-            x: current_pos_world.x,
-            y: current_pos_world.y,
-        };
-        let current_tile = absolute_coord_to_tile_coord(current_pos_abs);
-
         // Trouver la prochaine tuile cible depuis le flow field
-        if let Some(&next_tile) = flow_field.get_next_tile(&current_tile) {
-            // Calculer la position cible (le centre de la prochaine tuile)
-            let target_pos_abs = tile_coord_to_absolute_coord(next_tile);
-            let target_pos_world: Vec2 = target_pos_abs.into();
-
-            // Calculer la direction et la force vers la cible
-            let to_target_vec = target_pos_world - current_pos_world;
-            let direction_to_target = to_target_vec.normalize_or_zero();
-
-            // Appliquer la force
-            linear_velocity.x = direction_to_target.x * speed_stat.0;
-            linear_velocity.y = direction_to_target.y * speed_stat.0;
-        } else {
-            // pas de chemin -> on arrête
-            linear_velocity.x = 0.0;
-            linear_velocity.y = 0.0;
+        if let Some(&next_tile) = flow_field.get_next_tile(&grid_position.0) {
+            *desired_movement = DesiredMovement::new(next_tile, current_map_id.0);
         }
     }
 }

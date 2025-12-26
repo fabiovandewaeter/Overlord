@@ -2,8 +2,8 @@ use bevy::{prelude::*, sprite_render::TilemapChunk};
 
 use crate::{
     map::{
-        CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
-        coordinates::{GridPosition, TileCoordinates, tile_coord_to_absolute_coord},
+        MapId, MultiMapManager, StructureLayerManager,
+        coordinates::{GridPosition, TileCoordinates},
         structure::StructureBundle,
     },
     physics::{
@@ -50,15 +50,7 @@ pub fn portal_collision_handler(
     mut multi_map_manager: ResMut<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
-    mut unit_query: Query<
-        (
-            &mut GridPosition,
-            &mut CurrentMapId,
-            &mut DesiredMovement,
-            &mut CollisionHistory,
-        ),
-        With<Unit>,
-    >,
+    mut unit_query: Query<(&mut DesiredMovement, &mut CollisionHistory), With<Unit>>,
     game_time: Res<GameTime>,
 
     asset_server: Res<AssetServer>,
@@ -68,7 +60,7 @@ pub fn portal_collision_handler(
     let Ok(portal) = portal_query.get(event.entity) else {
         return;
     };
-    let (mut unit_transform, mut unit_current_map_id, mut collision_history) =
+    let (mut unit_desired_movement, mut collision_history) =
         unit_query.get_mut(event.source).unwrap();
 
     let destination_map_manager =
@@ -90,13 +82,6 @@ pub fn portal_collision_handler(
         }
     }
 
-    println!(
-        "portal_collision_handler: teleport unit from {:?} to map {:?} and tile coords {:?}",
-        unit_transform, portal.destination_map_id, portal.destination_tile_pos
-    );
-
-    unit_current_map_id.0 = portal.destination_map_id;
-    let target_absolute_pos = tile_coord_to_absolute_coord(portal.destination_tile_pos);
-    unit_transform.translation.x = target_absolute_pos.x;
-    unit_transform.translation.y = target_absolute_pos.y;
+    *unit_desired_movement =
+        DesiredMovement::new(portal.destination_tile_pos, portal.destination_map_id);
 }

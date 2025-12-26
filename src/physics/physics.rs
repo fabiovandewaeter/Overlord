@@ -4,9 +4,12 @@ use crate::{
     FixedSet,
     loading::LoadingState,
     map::structure::portal::portal_collision_handler,
-    physics::collision_event::{
-        cleanup_collision_history_system, generic_collision_filter_handler,
-        machine_collision_handler, wall_collision_handler,
+    physics::{
+        collision_event::{
+            cleanup_collision_history_system, generic_collision_filter_handler,
+            machine_collision_handler, wall_collision_handler,
+        },
+        movement::{apply_desired_movement_system, sync_grid_pos_to_transform},
     },
     units::{player_control_system, units_follow_field_system},
 };
@@ -20,8 +23,12 @@ impl Plugin for PhysicsPlugin {
                 (
                     player_control_system.in_set(FixedSet::Movement),
                     units_follow_field_system.in_set(FixedSet::Movement),
-                ),
+                )
+                    .before(apply_desired_movement_system),
+                apply_desired_movement_system.in_set(FixedSet::Collision),
                 cleanup_collision_history_system.in_set(FixedSet::Collision),
+                // TODO: move that elsewhere
+                sync_grid_pos_to_transform,
             )
                 .chain()
                 .run_if(in_state(LoadingState::Ready)),

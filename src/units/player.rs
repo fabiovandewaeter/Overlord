@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use crate::{
     direction::Direction,
-    map::coordinates::{GridPosition, TileCoordinates},
+    map::{
+        CurrentMapId,
+        coordinates::{GridPosition, TileCoordinates},
+    },
     physics::movement::DesiredMovement,
     units::{SpeedStat, UnitBundle, pathfinding::RecalculateFlowField},
 };
@@ -27,6 +30,7 @@ pub fn player_control_system(
     mut unit_query: Query<
         (
             &GridPosition,
+            &CurrentMapId,
             &mut DesiredMovement,
             &mut Direction,
             &SpeedStat,
@@ -36,7 +40,8 @@ pub fn player_control_system(
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
-    let Ok((grid_pos, mut desired_movement, mut direction, speed_stat)) = unit_query.single_mut()
+    let Ok((grid_pos, current_map_id, mut desired_movement, mut direction, speed_stat)) =
+        unit_query.single_mut()
     else {
         return;
     };
@@ -65,10 +70,11 @@ pub fn player_control_system(
         has_moved = true;
     }
 
-    desired_movement.target = Some(TileCoordinates {
+    desired_movement.tile = Some(TileCoordinates {
         x: grid_pos.0.x + delta.x,
-        y: grid_pos.0.y + delta.y,
+        y: grid_pos.0.y - delta.y,
     });
+    desired_movement.map_id = Some(current_map_id.0);
 
     // TODO: change to put that after the collisions check
     if has_moved {

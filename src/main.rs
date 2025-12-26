@@ -9,7 +9,7 @@ use overlord::{
     loading::{LoadingPlugin, LoadingState},
     map::{
         self, CurrentMapId, MapManager, MapPlugin, MultiMapManager,
-        coordinates::{Coordinates, coord_to_absolute_coord},
+        coordinates::{Coordinates, GridPosition, coord_to_absolute_coord, coord_to_tile_coord},
         spawn_first_chunk_system,
     },
     physics::PhysicsPlugin,
@@ -122,16 +122,11 @@ fn setup_system(
     let player_texture_handle = asset_server.load("default.png");
     let speed = SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED);
     let coordinates = Coordinates { x: 0.0, y: 0.0 };
-    let absolute_coordinates = coord_to_absolute_coord(coordinates);
-    let mut transform = Transform::from_xyz(
-        absolute_coordinates.x,
-        absolute_coordinates.y,
-        Unit::DEFAULT_LAYER,
-    );
-    transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
+    let tile_coord = coord_to_tile_coord(coordinates);
+    //transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
     let unit_bundle = UnitBundle::new(
         Name::new("Player"),
-        transform,
+        GridPosition(tile_coord),
         CurrentMapId(map::DEFAULT_MAP_ID),
         speed,
     );
@@ -139,16 +134,11 @@ fn setup_system(
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 
     let coordinates = Coordinates { x: 5.0, y: 5.0 };
-    let absolute_coordinates = coord_to_absolute_coord(coordinates);
-    let mut transform = Transform::from_xyz(
-        absolute_coordinates.x,
-        absolute_coordinates.y,
-        Unit::DEFAULT_LAYER,
-    );
-    transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
+    let tile_coord = coord_to_tile_coord(coordinates);
+    //transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
     let bundle = UnitBundle::new(
         Name::new("Monstre"),
-        transform,
+        GridPosition(tile_coord),
         CurrentMapId(map::DEFAULT_MAP_ID),
         SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED),
     );
