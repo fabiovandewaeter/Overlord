@@ -9,7 +9,10 @@ use crate::{
             cleanup_collision_history_system, generic_collision_filter_handler,
             machine_collision_handler, wall_collision_handler,
         },
-        movement::{apply_desired_movement_system, sync_grid_pos_to_transform},
+        movement::{
+            apply_desired_movement_system, sync_grid_pos_to_transform,
+            update_units_movement_accumulators_system,
+        },
     },
     units::{player_control_system, units_follow_field_system},
 };
@@ -20,6 +23,7 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             FixedUpdate,
             (
+                update_units_movement_accumulators_system.in_set(FixedSet::Movement),
                 (
                     player_control_system.in_set(FixedSet::Movement),
                     units_follow_field_system.in_set(FixedSet::Movement),

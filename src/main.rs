@@ -12,12 +12,12 @@ use overlord::{
         coordinates::{Coordinates, GridPosition, coord_to_tile_coord},
         spawn_first_chunk_system,
     },
-    physics::PhysicsPlugin,
+    physics::{PhysicsPlugin, movement::SpeedStat},
     time::{
         GameTime, UpsCounter, day_night_cycle_system, display_fps_ups_system,
         fixed_update_counter_system,
     },
-    units::{PlayerBundle, SpeedStat, Unit, UnitBundle, pathfinding::PathfindingPlugin},
+    units::{PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin},
 };
 
 fn main() {
@@ -120,27 +120,24 @@ fn setup_system(
 
     // Units + Player
     let player_texture_handle = asset_server.load("default.png");
-    let speed = SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED);
     let coordinates = Coordinates { x: 0.0, y: 0.0 };
     let tile_coord = coord_to_tile_coord(coordinates);
-    //transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
     let unit_bundle = UnitBundle::new(
         Name::new("Player"),
         GridPosition(tile_coord),
         CurrentMapId(map::DEFAULT_MAP_ID),
-        speed,
+        SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
     );
     let bundle = PlayerBundle::new(unit_bundle);
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 
     let coordinates = Coordinates { x: 0.0, y: 5.0 };
     let tile_coord = coord_to_tile_coord(coordinates);
-    //transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
     let bundle = UnitBundle::new(
         Name::new("Monstre"),
         GridPosition(tile_coord),
         CurrentMapId(map::DEFAULT_MAP_ID),
-        SpeedStat(Unit::DEFAULT_MOVEMENT_SPEED),
+        SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
     );
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 }

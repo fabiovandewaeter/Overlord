@@ -3,7 +3,7 @@ use crate::{
     loading::LoadingState,
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
-        coordinates::{GridPosition, TileCoordinates, absolute_coord_to_tile_coord},
+        coordinates::{GridPosition, TileCoordinates},
     },
     units::{Player, player_control_system},
 };

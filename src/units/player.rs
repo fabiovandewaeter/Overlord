@@ -6,7 +6,7 @@ use crate::{
         CurrentMapId,
         coordinates::{GridPosition, TileCoordinates},
     },
-    physics::movement::DesiredMovement,
+    physics::movement::{DesiredMovement, MovementAccumulator},
     units::{UnitBundle, pathfinding::RecalculateFlowField},
 };
 
@@ -31,6 +31,7 @@ pub fn player_control_system(
         (
             &GridPosition,
             &CurrentMapId,
+            &mut MovementAccumulator,
             &mut DesiredMovement,
             &mut Direction,
         ),
@@ -39,11 +40,20 @@ pub fn player_control_system(
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
-    let Ok((grid_pos, current_map_id, mut desired_movement, mut direction)) =
-        unit_query.single_mut()
+    let Ok((
+        grid_pos,
+        current_map_id,
+        mut movement_accumulator,
+        mut desired_movement,
+        mut direction,
+    )) = unit_query.single_mut()
     else {
         return;
     };
+
+    if movement_accumulator.0 < MovementAccumulator::MOVEMENT_COST {
+        return;
+    }
 
     let mut delta = IVec2::ZERO;
     let mut has_moved = false;
@@ -67,6 +77,9 @@ pub fn player_control_system(
 
     if delta.x != 0 || delta.y != 0 {
         has_moved = true;
+
+        // movement_accumulator.0 = 0.0;
+        // movement_accumulator.0 -= MovementAccumulator::MOVEMENT_COST;
     }
 
     desired_movement.tile = Some(TileCoordinates {
