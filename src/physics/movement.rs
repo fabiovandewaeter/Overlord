@@ -132,11 +132,16 @@ pub fn apply_desired_movement_system(
 
 // TODO: move that elsewhere
 pub fn sync_grid_pos_to_transform(
-    mut query: Query<(&GridPosition, &mut Transform), Changed<GridPosition>>,
+    mut query: Query<(&GridPosition, &mut Transform)>,
+    time: Res<Time>,
 ) {
     for (grid_pos, mut transform) in query.iter_mut() {
-        let new_absolute_coords = tile_coord_to_absolute_coord(grid_pos.0);
-        transform.translation.x = new_absolute_coords.x;
-        transform.translation.y = new_absolute_coords.y;
+        let target = tile_coord_to_absolute_coord(grid_pos.0);
+        let target_vec3 = Vec3::new(target.x, target.y, transform.translation.z);
+
+        // Lerp rapide (15.0 de speed) pour glisser vers la case
+        transform.translation = transform
+            .translation
+            .lerp(target_vec3, time.delta_secs() * 15.0);
     }
 }

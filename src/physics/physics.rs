@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    FixedSet,
+    FixedSet, GameSet,
     loading::LoadingState,
     map::structure::portal::portal_collision_handler,
     physics::{
@@ -32,11 +32,11 @@ impl Plugin for PhysicsPlugin {
                 apply_desired_movement_system.in_set(FixedSet::Collision),
                 cleanup_collision_history_system.in_set(FixedSet::Collision),
                 // TODO: move that elsewhere
-                sync_grid_pos_to_transform,
             )
                 .chain()
                 .run_if(in_state(LoadingState::Ready)),
         )
+        .add_systems(Update, sync_grid_pos_to_transform.in_set(GameSet::Visual))
         .add_observer(generic_collision_filter_handler)
         .add_observer(machine_collision_handler)
         .add_observer(wall_collision_handler)

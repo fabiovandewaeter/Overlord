@@ -40,13 +40,8 @@ pub fn player_control_system(
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
-    let Ok((
-        grid_pos,
-        current_map_id,
-        mut movement_accumulator,
-        mut desired_movement,
-        mut direction,
-    )) = unit_query.single_mut()
+    let Ok((grid_pos, current_map_id, movement_accumulator, mut desired_movement, mut direction)) =
+        unit_query.single_mut()
     else {
         return;
     };

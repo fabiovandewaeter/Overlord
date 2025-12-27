@@ -81,7 +81,7 @@ pub fn units_follow_field_system(
     >,
     flow_field: Res<FlowField>,
 ) {
-    for (grid_position, current_map_id, mut movement_accumulator, mut desired_movement) in
+    for (grid_position, current_map_id, movement_accumulator, mut desired_movement) in
         unit_query.iter_mut()
     {
         if movement_accumulator.0 < MovementAccumulator::MOVEMENT_COST {
