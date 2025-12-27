@@ -133,7 +133,7 @@ fn setup_system(
     let bundle = PlayerBundle::new(unit_bundle);
     commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
 
-    let coordinates = Coordinates { x: 5.0, y: 5.0 };
+    let coordinates = Coordinates { x: 0.0, y: 5.0 };
     let tile_coord = coord_to_tile_coord(coordinates);
     //transform.scale *= Unit::DEFAULT_SCALE_MULTIPLIER;
     let bundle = UnitBundle::new(

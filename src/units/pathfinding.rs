@@ -3,7 +3,7 @@ use crate::{
     loading::LoadingState,
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
-        coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
+        coordinates::{GridPosition, TileCoordinates, absolute_coord_to_tile_coord},
     },
     units::{Player, player_control_system},
 };
@@ -39,6 +39,22 @@ impl FlowField {
         self.flow_field.get(&current_tile_coords)
     }
 
+    pub fn set_flow_field(
+        &mut self,
+        player_tile: TileCoordinates,
+        pathing_result: HashMap<TileCoordinates, (TileCoordinates, i32)>,
+        map_id: MapId,
+    ) {
+        self.flow_field.clear();
+
+        for (tile, (parent, _cost)) in pathing_result {
+            if tile != player_tile {
+                self.flow_field.insert(tile, parent);
+            }
+        }
+        self.map_id = map_id;
+    }
+
     pub fn clear(&mut self, new_map_id: MapId) {
         self.flow_field.clear();
         self.map_id = new_map_id;
@@ -62,7 +78,7 @@ pub fn calculate_flow_field_system(
     mut message_recalculate: MessageReader<RecalculateFlowField>,
     mut flow_field: ResMut<FlowField>,
     multi_map_manager: Res<MultiMapManager>,
-    player_query: Query<(&Transform, &CurrentMapId), With<Player>>,
+    player_query: Query<(&GridPosition, &CurrentMapId), With<Player>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
 ) {
     if message_recalculate.is_empty() {
@@ -70,24 +86,21 @@ pub fn calculate_flow_field_system(
     }
     message_recalculate.clear();
 
-    let Ok((transform, current_map_id)) = player_query.single() else {
+    let Ok((grid_pos, current_map_id)) = player_query.single() else {
         return;
     };
     let Some(map_manager) = multi_map_manager.maps.get(&current_map_id.0) else {
-        panic!();
+        panic!("Map manager not found for current map");
     };
-    let goal = absolute_coord_to_tile_coord((*transform).into());
+    let player_tile = grid_pos.0;
 
     // TODO: regarder si on devrait utiliser dijkstra_partial ou dijkstra_reach
-    let cost_map = dijkstra_all(&goal, |&tile| {
+    let pathing_result = dijkstra_all(&player_tile, |&tile| {
         let mut neighbors = Vec::with_capacity(8);
+
         for y in -1..=1 {
             for x in -1..=1 {
                 if x == 0 && y == 0 {
-                    continue;
-                }
-
-                if x != 0 && y != 0 {
                     continue;
                 }
 
@@ -97,21 +110,20 @@ pub fn calculate_flow_field_system(
                 };
 
                 // Vérifier que le voisin est dans le rayon ET praticable
-                let dx = (neighbor_tile.x - goal.x).abs();
-                let dy = (neighbor_tile.y - goal.y).abs();
+                let dx = (neighbor_tile.x - player_tile.x).abs();
+                let dy = (neighbor_tile.y - player_tile.y).abs();
 
                 if dx > FLOWFIELD_RADIUS || dy > FLOWFIELD_RADIUS {
                     continue;
                 }
 
-                // 1. Vérifier si la tuile de destination est marchable
+                // check if walkable
                 if !map_manager.is_tile_walkable(neighbor_tile, &chunk_query) {
                     continue;
                 }
 
-                // 2. NOUVELLE VÉRIFICATION : Empêcher de couper les coins
+                // then check if it's in a corner
                 if x != 0 && y != 0 {
-                    // C'est un mouvement diagonal
                     let adjacent_1 = TileCoordinates {
                         x: tile.x + x,
                         y: tile.y,
@@ -121,15 +133,15 @@ pub fn calculate_flow_field_system(
                         y: tile.y + y,
                     };
 
+                    // does not allow the movement if one it cuts a corner
                     if !map_manager.is_tile_walkable(adjacent_1, &chunk_query)
                         || !map_manager.is_tile_walkable(adjacent_2, &chunk_query)
                     {
-                        // L'un des coins est un mur, on ne peut pas passer
                         continue;
                     }
                 }
 
-                // Si on arrive ici, le mouvement est valide
+                // if reached, the movement is valide
                 let cost = if x == 0 || y == 0 { 10 } else { 14 };
                 neighbors.push((neighbor_tile, cost));
             }
@@ -138,52 +150,5 @@ pub fn calculate_flow_field_system(
         neighbors
     });
 
-    // flow_field.0.clear();
-    flow_field.clear(current_map_id.0);
-    for y in (goal.y - FLOWFIELD_RADIUS)..=(goal.y + FLOWFIELD_RADIUS) {
-        for x in (goal.x - FLOWFIELD_RADIUS)..=(goal.x + FLOWFIELD_RADIUS) {
-            let tile = TileCoordinates { x, y };
-
-            if tile == goal {
-                continue;
-            }
-
-            if !map_manager.is_tile_walkable(tile, &chunk_query) {
-                continue;
-            }
-
-            let mut best_neighbor = tile;
-            let mut min_cost = cost_map.get(&tile).map_or(u32::MAX, |&(_, cost)| cost);
-
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if dx == 0 && dy == 0 {
-                        continue;
-                    }
-
-                    if dx != 0 && dy != 0 {
-                        continue;
-                    }
-
-                    let neighbor_tile = TileCoordinates {
-                        x: tile.x + dx,
-                        y: tile.y + dy,
-                    };
-
-                    if let Some((_, neighbor_cost)) = cost_map.get(&neighbor_tile) {
-                        if *neighbor_cost < min_cost {
-                            min_cost = *neighbor_cost;
-                            best_neighbor = neighbor_tile;
-                        }
-                    }
-                }
-            }
-
-            // si on a trouvé un chemin vers le player
-            if best_neighbor != tile {
-                // flow_field.0.insert(tile, best_neighbor);
-                flow_field.insert(tile, best_neighbor, current_map_id.0);
-            }
-        }
-    }
+    flow_field.set_flow_field(player_tile, pathing_result, current_map_id.0);
 }
