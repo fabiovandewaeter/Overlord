@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use bevy::{prelude::*, sprite_render::TilemapChunk};
-use pathfinding::{grid, prelude::astar};
+use pathfinding::prelude::astar;
 
 use crate::{
     direction::Direction,

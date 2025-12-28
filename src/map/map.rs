@@ -88,7 +88,6 @@ pub struct ChunkBundle {
 #[derive(Component)]
 pub struct MapRoot(pub MapId);
 
-// #[derive(Default)]
 pub struct MapManager {
     /// MapRoot; all chunks of the map are children of this entity; usefull to change visibility or despawn
     root_entity: Entity,
@@ -97,7 +96,7 @@ pub struct MapManager {
 impl MapManager {
     pub fn new(map_id: MapId, commands: &mut Commands) -> Self {
         let root_entity = commands
-            .spawn((Transform::default(), Visibility::default(), MapRoot(map_id)))
+            .spawn((Transform::default(), Visibility::Hidden, MapRoot(map_id)))
             .id();
         Self {
             root_entity,

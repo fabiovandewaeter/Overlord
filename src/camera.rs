@@ -137,7 +137,14 @@ pub fn handle_camera_inputs_system(
 
 /// when camera changes map, hides previous map and its units and show new map and its units
 pub fn update_map_visibility_camera_change_map_system(
-    camera_query: Query<&CurrentMapId, (With<Camera>, Changed<CurrentMapId>)>,
+    // just to get the ID even when no change has been detected
+    camera_query: Query<&CurrentMapId, With<Camera>>,
+
+    // detects changes
+    camera_changed: Query<(), (With<Camera>, Changed<CurrentMapId>)>,
+    new_maps_added: Query<(), Added<MapRoot>>,
+    new_units_added: Query<(), (Added<Unit>, Without<MapRoot>)>,
+
     mut map_root_query: Query<(&MapRoot, &mut Visibility)>,
     mut unit_query: Query<(&CurrentMapId, &mut Visibility), (With<Unit>, Without<MapRoot>)>,
 ) {
@@ -145,19 +152,24 @@ pub fn update_map_visibility_camera_change_map_system(
         return;
     };
 
-    for (map_root, mut visibility) in map_root_query.iter_mut() {
-        if map_root.0 == camera_map_id.0 {
-            *visibility = Visibility::Inherited;
-        } else {
-            *visibility = Visibility::Hidden;
+    // if a change has been detected, update visibility
+    if !camera_changed.is_empty() || !new_maps_added.is_empty() || !new_units_added.is_empty() {
+        // updates visibility for map and chunks
+        for (map_root, mut visibility) in map_root_query.iter_mut() {
+            if map_root.0 == camera_map_id.0 {
+                *visibility = Visibility::Inherited;
+            } else {
+                *visibility = Visibility::Hidden;
+            }
         }
-    }
 
-    for (unit_map_id, mut visibility) in unit_query.iter_mut() {
-        if unit_map_id.0 == camera_map_id.0 {
-            *visibility = Visibility::Inherited;
-        } else {
-            *visibility = Visibility::Hidden;
+        // updates visibility for units
+        for (unit_map_id, mut visibility) in unit_query.iter_mut() {
+            if unit_map_id.0 == camera_map_id.0 {
+                *visibility = Visibility::Inherited;
+            } else {
+                *visibility = Visibility::Hidden;
+            }
         }
     }
 }
