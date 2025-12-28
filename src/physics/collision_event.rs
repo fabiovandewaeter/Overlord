@@ -124,7 +124,6 @@ pub fn generic_collision_filter_handler(
         }
         CollisionEffectCooldown::EveryTick => {
             should_trigger = true;
-            todo!("doesn't work yet because update is made only one time when unit moves");
         }
         CollisionEffectCooldown::Ticks(cooldown) => {
             if is_new_collision {

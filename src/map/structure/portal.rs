@@ -8,7 +8,7 @@ use crate::{
     },
     physics::{
         collision_event::{ApplyCollisionEffect, CollisionEffectCooldown, CollisionHistory},
-        movement::{DesiredMovement, Passable},
+        movement::Passable,
     },
     time::GameTime,
     units::{Unit, pathfinding::RecalculateFlowField},
