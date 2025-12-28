@@ -11,7 +11,7 @@ use crate::{
         movement::Passable,
     },
     time::GameTime,
-    units::{Unit, pathfinding::RecalculateFlowField},
+    units::{PlayerPath, Unit, pathfinding::RecalculateFlowField},
 };
 
 #[derive(Component)]
@@ -51,7 +51,12 @@ pub fn portal_collision_handler(
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
     mut unit_query: Query<
-        (&mut GridPosition, &mut CurrentMapId, &mut CollisionHistory),
+        (
+            &mut GridPosition,
+            &mut CurrentMapId,
+            &mut CollisionHistory,
+            Option<&mut PlayerPath>,
+        ),
         With<Unit>,
     >,
     game_time: Res<GameTime>,
@@ -64,7 +69,7 @@ pub fn portal_collision_handler(
         return;
     };
 
-    let (mut unit_grid_pos, mut unit_current_map_id, mut collision_history) =
+    let (mut unit_grid_pos, mut unit_current_map_id, mut collision_history, unit_path_option) =
         unit_query.get_mut(event.source).unwrap();
 
     let destination_map_manager =
@@ -88,6 +93,13 @@ pub fn portal_collision_handler(
 
     unit_grid_pos.0 = portal.destination_tile_pos;
     unit_current_map_id.0 = portal.destination_map_id;
+
+    // clear path to avoid strange behaviors
+    if let Some(mut path) = unit_path_option {
+        path.clear();
+    }
+
+    message_recalculate.write_default();
 
     // unit_desired_movement.tile = None;
     // unit_desired_movement.map_id = None;

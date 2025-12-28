@@ -1,22 +1,37 @@
-use bevy::prelude::*;
+use std::collections::VecDeque;
+
+use bevy::{prelude::*, sprite_render::TilemapChunk};
+use pathfinding::{grid, prelude::astar};
 
 use crate::{
     direction::Direction,
     map::{
-        CurrentMapId,
-        coordinates::{GridPosition, TileCoordinates},
+        CurrentMapId, MultiMapManager, StructureLayerManager,
+        coordinates::{
+            AbsoluteCoordinates, GridPosition, TileCoordinates, absolute_coord_to_tile_coord,
+        },
+        structure::Structure,
     },
-    physics::movement::{DesiredMovement, MovementAccumulator},
+    physics::movement::{DesiredMovement, MovementAccumulator, Passable},
     units::{UnitBundle, pathfinding::RecalculateFlowField},
 };
 
-#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum TurnState {
-    /// wait for player inputs
-    #[default]
-    PlayerTurn,
-    /// updates everything that has enough energy except player
-    WorldTurn,
+#[derive(Component, Default, Debug)]
+pub struct PlayerPath {
+    waypoints: VecDeque<TileCoordinates>,
+}
+impl PlayerPath {
+    pub fn clear(&mut self) {
+        self.waypoints.clear();
+    }
+
+    pub fn next_tile(&self) -> Option<TileCoordinates> {
+        self.waypoints.front().copied()
+    }
+
+    pub fn pop_front(&mut self) -> Option<TileCoordinates> {
+        self.waypoints.pop_front()
+    }
 }
 
 #[derive(Component)]
@@ -27,12 +42,14 @@ impl Player {
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub base: UnitBundle,
+    pub path: PlayerPath,
     pub player: Player,
 }
 impl PlayerBundle {
     pub fn new(base: UnitBundle) -> Self {
         Self {
             base,
+            path: PlayerPath::default(),
             player: Player,
         }
     }
@@ -46,14 +63,21 @@ pub fn player_control_system(
             &mut MovementAccumulator,
             &mut DesiredMovement,
             &mut Direction,
+            &mut PlayerPath,
         ),
         With<Player>,
     >,
     input: Res<ButtonInput<KeyCode>>,
     mut message_recalculate: MessageWriter<RecalculateFlowField>,
 ) {
-    let Ok((grid_pos, current_map_id, movement_accumulator, mut desired_movement, mut direction)) =
-        unit_query.single_mut()
+    let Ok((
+        grid_pos,
+        current_map_id,
+        movement_accumulator,
+        mut desired_movement,
+        mut direction,
+        mut player_path,
+    )) = unit_query.single_mut()
     else {
         return;
     };
@@ -62,8 +86,15 @@ pub fn player_control_system(
         return;
     }
 
-    let mut delta = IVec2::ZERO;
+    // if the player reached next waypoint of pathfinding, removes it
+    if let Some(target) = player_path.next_tile() {
+        if target == grid_pos.0 {
+            player_path.pop_front();
+        }
+    }
 
+    // keyboard inputs
+    let mut delta = IVec2::ZERO;
     if input.pressed(KeyCode::KeyW) || input.pressed(KeyCode::ArrowUp) {
         delta.y += 1;
         *direction = Direction::North;
@@ -85,6 +116,9 @@ pub fn player_control_system(
         // movement_accumulator.0 = 0.0;
         // movement_accumulator.0 -= MovementAccumulator::MOVEMENT_COST;
 
+        // moving with keyboard stop pathfinding
+        player_path.clear();
+
         desired_movement.tile = Some(TileCoordinates {
             x: grid_pos.0.x + delta.x,
             y: grid_pos.0.y - delta.y,
@@ -93,8 +127,129 @@ pub fn player_control_system(
 
         // TODO: change to put that after the collisions check
         message_recalculate.write_default();
+    } else if let Some(next_tile) = player_path.next_tile() {
+        // mouse inputs
+
+        let dx = next_tile.x - grid_pos.0.x;
+        let dy = next_tile.y - grid_pos.0.y;
+
+        // stops if the waypoint is too far
+        if dx.abs() > 1 || dy.abs() > 1 {
+            player_path.clear();
+            desired_movement.tile = None;
+
+            return;
+        }
+
+        if dx > 0 {
+            *direction = Direction::East;
+        } else if dx < 0 {
+            *direction = Direction::West;
+        } else if dy > 0 {
+            *direction = Direction::South;
+        } else if dy < 0 {
+            *direction = Direction::North;
+        }
+
+        desired_movement.tile = Some(next_tile);
+        desired_movement.map_id = Some(current_map_id.0);
+
+        // player_path.pop_front();
+
+        message_recalculate.write_default();
     } else {
         desired_movement.tile = None;
         desired_movement.map_id = None;
+    }
+}
+
+pub fn player_mouse_input_system(
+    buttons: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
+    mut player_query: Query<(&GridPosition, &CurrentMapId, &mut PlayerPath), With<Player>>,
+    multi_map_manager: Res<MultiMapManager>,
+    structure_query: Query<Has<Passable>, With<Structure>>,
+    chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
+) {
+    if !buttons.just_pressed(MouseButton::Right) {
+        return;
+    }
+
+    let (camera, camera_transform) = camera_q.single().unwrap();
+    let window = windows.single().unwrap();
+
+    if let Some(world_position) = window
+        .cursor_position()
+        .and_then(|cursor| Some(camera.viewport_to_world(camera_transform, cursor)))
+        .map(|ray| ray.unwrap().origin.truncate())
+    {
+        let Ok((player_pos, map_id, mut player_path)) = player_query.single_mut() else {
+            panic!()
+        };
+
+        // Convertir world_pos en TileCoordinates (adaptation de ta logique existante)
+        let absolute_coords = AbsoluteCoordinates {
+            x: world_position.x,
+            y: world_position.y,
+        };
+        let target_tile = absolute_coord_to_tile_coord(absolute_coords);
+
+        let start_tile = player_pos.0;
+
+        // Si on clique sur soi-même, on arrête le mouvement
+        if start_tile == target_tile {
+            player_path.waypoints.clear();
+            return;
+        }
+
+        let Some(map_manager) = multi_map_manager.maps.get(&map_id.0) else {
+            return;
+        };
+
+        // 3. Calcul A* (A-Star)
+        // C'est similaire à ton FlowField mais ciblé vers une destination
+        let result = astar(
+            &start_tile,
+            |&tile| {
+                let mut neighbors = Vec::with_capacity(8);
+                for y in -1..=1 {
+                    for x in -1..=1 {
+                        if x == 0 && y == 0 {
+                            continue;
+                        }
+
+                        let neighbor = TileCoordinates {
+                            x: tile.x + x,
+                            y: tile.y + y,
+                        };
+
+                        // Réutilisation de ta logique de collision existante
+                        if map_manager.can_move_between(
+                            tile,
+                            neighbor,
+                            &structure_query,
+                            &chunk_query,
+                        ) {
+                            // Coût: 10 pour cardinal, 14 pour diagonale (approximation de sqrt(2)*10)
+                            let cost = if x == 0 || y == 0 { 10 } else { 14 };
+                            neighbors.push((neighbor, cost));
+                        }
+                    }
+                }
+                neighbors
+            },
+            |&tile| {
+                // Heuristique (Distance de Manhattan ou Chebyshev pour A*)
+                ((tile.x - target_tile.x).abs() + (tile.y - target_tile.y).abs()) * 10
+            },
+            |&tile| tile == target_tile,
+        );
+
+        // 4. Mettre à jour le chemin du joueur
+        if let Some((path, _cost)) = result {
+            // On saute le premier élément car c'est la position actuelle du joueur
+            player_path.waypoints = path.into_iter().skip(1).collect();
+        }
     }
 }

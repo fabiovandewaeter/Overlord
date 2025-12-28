@@ -14,7 +14,7 @@ use crate::{
             update_units_movement_accumulators_system,
         },
     },
-    units::{player_control_system, units_follow_field_system},
+    units::{player_control_system, player_mouse_input_system, units_follow_field_system},
 };
 
 pub struct PhysicsPlugin;
@@ -38,7 +38,11 @@ impl Plugin for PhysicsPlugin {
         // TODO: move sync_grid_pos_to_transform_system() elsewhere
         .add_systems(
             Update,
-            sync_grid_pos_to_transform_system.in_set(GameSet::Visual),
+            (
+                sync_grid_pos_to_transform_system.in_set(GameSet::Visual),
+                player_mouse_input_system.in_set(GameSet::Input),
+            )
+                .run_if(in_state(LoadingState::Ready)),
         )
         .add_observer(generic_collision_filter_handler)
         .add_observer(machine_collision_handler)

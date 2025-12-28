@@ -151,12 +151,19 @@ impl MapManager {
     }
 
     /// returns true if there is no structure on tile OR if the tile has Passable component
+    /// ONLY if the chunk is already load
     pub fn is_tile_walkable(
         &self,
         tile: TileCoordinates,
         structure_query: &Query<Has<Passable>, With<Structure>>,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
+        let chunk_coord = tile_coord_to_chunk_coord(tile);
+
+        if !self.chunks.contains_key(&chunk_coord) {
+            return false;
+        }
+
         if let Some(structure_entity) = self.get_structure(tile, chunk_query) {
             let is_passable = structure_query.get(structure_entity).unwrap();
             return is_passable;
