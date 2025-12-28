@@ -240,8 +240,20 @@ pub fn player_mouse_input_system(
                 neighbors
             },
             |&tile| {
-                // Heuristique (Distance de Manhattan ou Chebyshev pour A*)
-                ((tile.x - target_tile.x).abs() + (tile.y - target_tile.y).abs()) * 10
+                // ((tile.x - target_tile.x).abs() + (tile.y - target_tile.y).abs()) * 10
+                // CORRECTION ICI : Heuristique Octile
+                let dx = (tile.x - target_tile.x).abs();
+                let dy = (tile.y - target_tile.y).abs();
+
+                // On prend le plus petit des deux deltas pour les diagonales (coût 14)
+                // Et on complète la différence en ligne droite (coût 10)
+                let min = dx.min(dy);
+                let max = dx.max(dy);
+
+                // Formule : 14 * min + 10 * (max - min)
+                // Simplifié : 14 * min + 10 * max - 10 * min
+                // Simplifié : 4 * min + 10 * max
+                14 * min + 10 * (max - min)
             },
             |&tile| tile == target_tile,
         );
