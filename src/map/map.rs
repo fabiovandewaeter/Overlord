@@ -15,7 +15,7 @@ use crate::{
             tile_coord_to_local_tile_coord,
         },
         structure::{
-            StructureBundle, Wall,
+            Structure, StructureBundle, Wall,
             machine::{
                 BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
                 MachineBaseBundle, MachinePlugin, MiningMachine, MiningMachineBundle,
@@ -23,7 +23,7 @@ use crate::{
             portal::PortalBundle,
         },
     },
-    physics::collision_event::CollisionEffectCooldown,
+    physics::{collision_event::CollisionEffectCooldown, movement::Passable},
     units::{Unit, pathfinding::RecalculateFlowField},
 };
 use bevy::{
@@ -99,26 +99,6 @@ pub struct ChunkBundle {
     pub transform: Transform,
 }
 
-#[derive(Resource, Default)]
-pub struct MultiMapManager {
-    /// MapId -> MapManager
-    pub maps: HashMap<MapId, MapManager>,
-}
-impl MultiMapManager {
-    pub fn spawn_map_and_get_mut(
-        &mut self,
-        map_id: &MapId,
-        commands: &mut Commands,
-    ) -> &mut MapManager {
-        if self.maps.get_mut(map_id).is_none() {
-            self.maps
-                .insert(*map_id, MapManager::new(*map_id, commands));
-        };
-
-        self.maps.get_mut(map_id).unwrap()
-    }
-}
-
 /// all chunks of the map are children of this entity; usefull to change visibility or despawn
 #[derive(Component)]
 pub struct MapRoot(pub MapId);
@@ -185,12 +165,56 @@ impl MapManager {
         self.get_structure(tile, chunk_query)
     }
 
+    /// returns true if there is no structure on tile OR if the tile has Passable component
     pub fn is_tile_walkable(
         &self,
         tile: TileCoordinates,
+        structure_query: &Query<Has<Passable>, With<Structure>>,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
-        self.get_structure(tile, chunk_query).is_none()
+        if let Some(structure_entity) = self.get_structure(tile, chunk_query) {
+            let is_passable = structure_query.get(structure_entity).unwrap();
+            return is_passable;
+        }
+        true
+    }
+
+    /// returns true if is_tile_walkable() returns true AND if the movement isn't blocked by diagonal
+    pub fn can_move_between(
+        &self,
+        start: TileCoordinates,
+        end: TileCoordinates,
+        structure_query: &Query<Has<Passable>, With<Structure>>,
+        chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
+    ) -> bool {
+        if !self.is_tile_walkable(end, &structure_query, &chunk_query) {
+            return false;
+        }
+
+        // check if there is two structures that block the diagonal
+        let dx = end.x - start.x;
+        let dy = end.y - start.y;
+
+        if dx.abs() == 1 && dy.abs() == 1 {
+            let neighbor_x = TileCoordinates {
+                x: (start.x + dx),
+                y: start.y,
+            };
+            let neighbor_y = TileCoordinates {
+                x: start.x,
+                y: (start.y + dy),
+            };
+
+            let walkable_x = self.is_tile_walkable(neighbor_x, &structure_query, &chunk_query);
+            let walkable_y = self.is_tile_walkable(neighbor_y, &structure_query, &chunk_query);
+
+            // blocks if the TWO neighbors aren't walkable
+            if !walkable_x && !walkable_y {
+                return false;
+            }
+        }
+
+        true
     }
 
     pub fn insert_chunk_and_children(
@@ -205,6 +229,26 @@ impl MapManager {
         commands.entity(self.root_entity).add_children(children);
 
         self.chunks.insert(chunk_coord, chunk_entity);
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct MultiMapManager {
+    /// MapId -> MapManager
+    pub maps: HashMap<MapId, MapManager>,
+}
+impl MultiMapManager {
+    pub fn spawn_map_and_get_mut(
+        &mut self,
+        map_id: &MapId,
+        commands: &mut Commands,
+    ) -> &mut MapManager {
+        if self.maps.get_mut(map_id).is_none() {
+            self.maps
+                .insert(*map_id, MapManager::new(*map_id, commands));
+        };
+
+        self.maps.get_mut(map_id).unwrap()
     }
 }
 

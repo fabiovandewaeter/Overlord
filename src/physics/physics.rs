@@ -10,7 +10,7 @@ use crate::{
             machine_collision_handler, wall_collision_handler,
         },
         movement::{
-            apply_desired_movement_system, sync_grid_pos_to_transform,
+            apply_desired_movement_system, sync_grid_pos_to_transform_system,
             update_units_movement_accumulators_system,
         },
     },
@@ -31,12 +31,15 @@ impl Plugin for PhysicsPlugin {
                     .before(apply_desired_movement_system),
                 apply_desired_movement_system.in_set(FixedSet::Collision),
                 cleanup_collision_history_system.in_set(FixedSet::Collision),
-                // TODO: move that elsewhere
             )
                 .chain()
                 .run_if(in_state(LoadingState::Ready)),
         )
-        .add_systems(Update, sync_grid_pos_to_transform.in_set(GameSet::Visual))
+        // TODO: move sync_grid_pos_to_transform_system() elsewhere
+        .add_systems(
+            Update,
+            sync_grid_pos_to_transform_system.in_set(GameSet::Visual),
+        )
         .add_observer(generic_collision_filter_handler)
         .add_observer(machine_collision_handler)
         .add_observer(wall_collision_handler)

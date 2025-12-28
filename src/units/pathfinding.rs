@@ -4,7 +4,9 @@ use crate::{
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{GridPosition, TileCoordinates},
+        structure::Structure,
     },
+    physics::movement::Passable,
     units::{Player, player_control_system},
 };
 use bevy::{prelude::*, sprite_render::TilemapChunk};
@@ -77,6 +79,7 @@ pub struct RecalculateFlowField;
 pub fn calculate_flow_field_system(
     mut message_recalculate: MessageReader<RecalculateFlowField>,
     mut flow_field: ResMut<FlowField>,
+    structure_query: Query<Has<Passable>, With<Structure>>,
     multi_map_manager: Res<MultiMapManager>,
     player_query: Query<(&GridPosition, &CurrentMapId), With<Player>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
@@ -110,40 +113,19 @@ pub fn calculate_flow_field_system(
                 };
 
                 // Vérifier que le voisin est dans le rayon ET praticable
-                let dx = (neighbor_tile.x - player_tile.x).abs();
-                let dy = (neighbor_tile.y - player_tile.y).abs();
+                let dx_dist = (neighbor_tile.x - player_tile.x).abs();
+                let dy_dist = (neighbor_tile.y - player_tile.y).abs();
 
-                if dx > FLOWFIELD_RADIUS || dy > FLOWFIELD_RADIUS {
+                if dx_dist > FLOWFIELD_RADIUS || dy_dist > FLOWFIELD_RADIUS {
                     continue;
                 }
 
-                // check if walkable
-                if !map_manager.is_tile_walkable(neighbor_tile, &chunk_query) {
-                    continue;
+                if map_manager.can_move_between(tile, neighbor_tile, &structure_query, &chunk_query)
+                {
+                    // if reached, the movement is valide
+                    let cost = if x == 0 || y == 0 { 10 } else { 14 };
+                    neighbors.push((neighbor_tile, cost));
                 }
-
-                // then check if it's in a corner
-                if x != 0 && y != 0 {
-                    let adjacent_1 = TileCoordinates {
-                        x: tile.x + x,
-                        y: tile.y,
-                    };
-                    let adjacent_2 = TileCoordinates {
-                        x: tile.x,
-                        y: tile.y + y,
-                    };
-
-                    // does not allow the movement if one it cuts a corner
-                    if !map_manager.is_tile_walkable(adjacent_1, &chunk_query)
-                        || !map_manager.is_tile_walkable(adjacent_2, &chunk_query)
-                    {
-                        continue;
-                    }
-                }
-
-                // if reached, the movement is valide
-                let cost = if x == 0 || y == 0 { 10 } else { 14 };
-                neighbors.push((neighbor_tile, cost));
             }
         }
 

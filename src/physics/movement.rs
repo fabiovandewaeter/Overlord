@@ -7,6 +7,7 @@ use crate::{
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{GridPosition, TileCoordinates, tile_coord_to_absolute_coord},
+        structure::Structure,
     },
     time::GameTime,
     units::Unit,
@@ -87,12 +88,13 @@ pub fn apply_desired_movement_system(
         ),
         With<Unit>,
     >,
+    structure_query: Query<Has<Passable>, With<Structure>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     multi_map_manager: Res<MultiMapManager>,
 ) {
-    let mut occupied: HashSet<(TileCoordinates, MapId)> = HashSet::new();
+    let mut occupied_by_unit: HashSet<(TileCoordinates, MapId)> = HashSet::new();
     for (grid_pos, map_id, _, _) in query.iter() {
-        occupied.insert((grid_pos.0, map_id.0));
+        occupied_by_unit.insert((grid_pos.0, map_id.0));
     }
 
     for (mut grid_pos, mut current_map_id, mut movement_accumulator, mut desired_movement) in
@@ -110,12 +112,14 @@ pub fn apply_desired_movement_system(
             continue;
         }
 
+        let is_tile_occupied_by_unit = occupied_by_unit.contains(&(target_tile, target_map_id));
+
         let map_manager = multi_map_manager.maps.get(&current_map_id.0).unwrap();
 
-        let is_tile_occupied_by_unit = occupied.contains(&(target_tile, target_map_id));
-
-        if map_manager.is_tile_walkable(target_tile, &chunk_query) && !is_tile_occupied_by_unit {
-            occupied.remove(&(grid_pos.0, current_map_id.0));
+        if map_manager.can_move_between(grid_pos.0, target_tile, &structure_query, &chunk_query)
+            && !is_tile_occupied_by_unit
+        {
+            occupied_by_unit.remove(&(grid_pos.0, current_map_id.0));
 
             grid_pos.0 = target_tile;
             current_map_id.0 = target_map_id;
@@ -125,13 +129,16 @@ pub fn apply_desired_movement_system(
             desired_movement.tile = None;
             desired_movement.map_id = None;
 
-            occupied.insert((target_tile, target_map_id));
+            occupied_by_unit.insert((target_tile, target_map_id));
+        } else {
+            // so unit doesn't get stuck
+            desired_movement.tile = None;
         }
     }
 }
 
-// TODO: move that elsewhere
-pub fn sync_grid_pos_to_transform(
+// TODO: move sync_grid_pos_to_transform_system() elsewhere
+pub fn sync_grid_pos_to_transform_system(
     mut query: Query<(&GridPosition, &mut Transform)>,
     time: Res<Time>,
 ) {

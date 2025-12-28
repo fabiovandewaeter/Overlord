@@ -10,6 +10,15 @@ use crate::{
     units::{UnitBundle, pathfinding::RecalculateFlowField},
 };
 
+#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TurnState {
+    /// wait for player inputs
+    #[default]
+    PlayerTurn,
+    /// updates everything that has enough energy except player
+    WorldTurn,
+}
+
 #[derive(Component)]
 pub struct Player;
 #[derive(Bundle)]
