@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite_render::TilemapChunk};
 
 use crate::{
     map::{
-        MapId, MultiMapManager, StructureLayerManager,
+        CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{GridPosition, TileCoordinates},
         structure::StructureBundle,
     },
@@ -50,7 +50,10 @@ pub fn portal_collision_handler(
     mut multi_map_manager: ResMut<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
-    mut unit_query: Query<(&mut DesiredMovement, &mut CollisionHistory), With<Unit>>,
+    mut unit_query: Query<
+        (&mut GridPosition, &mut CurrentMapId, &mut CollisionHistory),
+        With<Unit>,
+    >,
     game_time: Res<GameTime>,
 
     asset_server: Res<AssetServer>,
@@ -60,9 +63,8 @@ pub fn portal_collision_handler(
     let Ok(portal) = portal_query.get(event.entity) else {
         return;
     };
-    println!("portal_collision_handler");
 
-    let (mut unit_desired_movement, mut collision_history) =
+    let (mut unit_grid_pos, mut unit_current_map_id, mut collision_history) =
         unit_query.get_mut(event.source).unwrap();
 
     let destination_map_manager =
@@ -84,6 +86,9 @@ pub fn portal_collision_handler(
         }
     }
 
-    *unit_desired_movement =
-        DesiredMovement::new(portal.destination_tile_pos, portal.destination_map_id);
+    unit_grid_pos.0 = portal.destination_tile_pos;
+    unit_current_map_id.0 = portal.destination_map_id;
+
+    // unit_desired_movement.tile = None;
+    // unit_desired_movement.map_id = None;
 }

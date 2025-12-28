@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
+use std::collections::HashMap;
 
 use crate::{
     map::structure::{Wall, machine::Machine},
@@ -15,7 +14,6 @@ pub struct Collision {
     pub source: Entity,
 }
 
-///
 #[derive(EntityEvent)]
 pub struct ApplyCollisionEffect {
     /// the targeted Entity
@@ -42,26 +40,56 @@ impl CollisionEffectCooldown {
 pub struct CollisionHistory {
     pub interactions: HashMap<Entity, (u64, u64)>,
 }
+impl CollisionHistory {
+    pub fn clear(&mut self) {
+        self.interactions.clear();
+    }
+}
 
-pub fn cleanup_collision_history_system(
-    mut query: Query<&mut CollisionHistory>,
+/// when units don't move, CollisionHistory isn't clear so active collisions are still stored inside
+pub fn update_active_collisions_system(
+    mut unit_query: Query<(Entity, &mut CollisionHistory)>,
+    target_query: Query<&CollisionEffectCooldown>,
     game_time: Res<GameTime>,
+    mut commands: Commands,
 ) {
     let current_tick = game_time.ticks;
 
-    // Si le tick est 0 (début du jeu), on ne fait rien pour éviter l'underflow
-    if current_tick == 0 {
-        return;
-    }
+    for (unit_entity, mut history) in unit_query.iter_mut() {
+        for (target_entity, (last_seen, last_effect_tick)) in history.interactions.iter_mut() {
+            let Ok(cooldown_policy) = target_query.get(*target_entity) else {
+                continue;
+            };
 
-    // if current_tick > last_contact + 1, it means that the effect can be applied again event if cooldown isn't finished
-    for mut history in &mut query {
-        // retain ne garde que les éléments qui renvoient true.
-        // On garde l'entrée SI : last_seen est égal à current_tick OU current_tick - 1
-        // Si last_seen < current_tick - 1, ça veut dire qu'on a raté au moins une frame de collision -> on est sorti.
-        history
-            .interactions
-            .retain(|_, (last_seen, _)| *last_seen >= current_tick.saturating_sub(1));
+            let mut should_trigger = false;
+
+            match cooldown_policy {
+                CollisionEffectCooldown::Never => {
+                    continue;
+                }
+                CollisionEffectCooldown::EveryTick => {
+                    should_trigger = true;
+                }
+                CollisionEffectCooldown::Ticks(cooldown) => {
+                    if current_tick >= *last_effect_tick + *cooldown {
+                        should_trigger = true;
+                    }
+                }
+            }
+
+            if should_trigger {
+                // On met à jour le tick du dernier effet
+                *last_effect_tick = current_tick;
+
+                // On redéclenche l'effet
+                commands.trigger(ApplyCollisionEffect {
+                    entity: *target_entity,
+                    source: unit_entity,
+                });
+            }
+
+            *last_seen = current_tick;
+        }
     }
 }
 
@@ -78,12 +106,13 @@ pub fn generic_collision_filter_handler(
 
     let current_tick = game_time.ticks;
 
-    let (_, last_effect) = *collision_history
+    let last_effect_tick = collision_history
         .interactions
         .get(&event.entity)
-        .unwrap_or(&(0, 0));
+        .map(|(_, last)| *last);
 
-    let is_new_collision = !collision_history.interactions.contains_key(&event.entity);
+    // because history get cleaned at every movements
+    let is_new_collision = last_effect_tick.is_none();
     let mut should_trigger = false;
 
     let cooldown_policy = target_query.get(event.entity).unwrap();
@@ -95,15 +124,21 @@ pub fn generic_collision_filter_handler(
         }
         CollisionEffectCooldown::EveryTick => {
             should_trigger = true;
+            todo!("doesn't work yet because update is made only one time when unit moves");
         }
         CollisionEffectCooldown::Ticks(cooldown) => {
-            if is_new_collision || current_tick >= last_effect + *cooldown {
+            if is_new_collision {
+                should_trigger = true;
+            } else if let Some(last) = last_effect_tick
+                && current_tick >= last + *cooldown
+            {
                 should_trigger = true;
             }
         }
     }
 
     if should_trigger {
+        println!("should_trigger");
         collision_history
             .interactions
             .insert(event.entity, (current_tick, current_tick));
@@ -113,9 +148,14 @@ pub fn generic_collision_filter_handler(
             source: event.source,
         });
     } else {
-        collision_history
-            .interactions
-            .insert(event.entity, (current_tick, last_effect));
+        println!("!should_trigger");
+        if let Some(last) = last_effect_tick {
+            collision_history
+                .interactions
+                .insert(event.entity, (current_tick, last));
+        } else {
+            panic!("don't know what is that case")
+        }
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
         coordinates::{GridPosition, TileCoordinates, tile_coord_to_absolute_coord},
         structure::Structure,
     },
-    physics::collision_event::Collision,
+    physics::collision_event::{Collision, CollisionHistory},
     time::GameTime,
     units::Unit,
 };
@@ -87,6 +87,7 @@ pub fn apply_desired_movement_system(
             &mut CurrentMapId,
             &mut MovementAccumulator,
             &mut DesiredMovement,
+            &mut CollisionHistory,
         ),
         With<Unit>,
     >,
@@ -96,7 +97,7 @@ pub fn apply_desired_movement_system(
     mut commands: Commands,
 ) {
     let mut occupied_by_unit: HashSet<(TileCoordinates, MapId)> = HashSet::new();
-    for (_, grid_pos, map_id, _, _) in unit_query.iter() {
+    for (_, grid_pos, map_id, _, _, _) in unit_query.iter() {
         occupied_by_unit.insert((grid_pos.0, map_id.0));
     }
 
@@ -106,6 +107,7 @@ pub fn apply_desired_movement_system(
         mut current_map_id,
         mut movement_accumulator,
         mut desired_movement,
+        mut collision_history,
     ) in unit_query.iter_mut()
     {
         let Some(target_tile) = desired_movement.tile else {
@@ -137,6 +139,9 @@ pub fn apply_desired_movement_system(
             desired_movement.map_id = None;
 
             occupied_by_unit.insert((target_tile, target_map_id));
+
+            // clear collision_history
+            collision_history.clear();
 
             // trigger collision because it's either an empty tile or a passable structure
             if let Some(structure_entity) = map_manager.get_structure(target_tile, &chunk_query) {
