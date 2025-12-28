@@ -4,7 +4,7 @@ use crate::{
     map::{
         CurrentMapId, MapId, MultiMapManager, StructureLayerManager,
         coordinates::{GridPosition, TileCoordinates},
-        structure::StructureBundle,
+        structure::{Structure, StructureBundle},
     },
     physics::{
         collision_event::{ApplyCollisionEffect, CollisionEffectCooldown, CollisionHistory},
@@ -50,6 +50,7 @@ pub fn portal_collision_handler(
     mut multi_map_manager: ResMut<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
+    structure_query: Query<Has<Passable>, With<Structure>>,
     mut unit_query: Query<
         (
             &mut GridPosition,
@@ -75,6 +76,7 @@ pub fn portal_collision_handler(
     let destination_map_manager =
         multi_map_manager.spawn_map_and_get_mut(&portal.destination_map_id, &mut commands);
 
+    // if target is a portal, disable it so it doesn't teleport back the unit instantly
     if let Some(target_portal_entity) = destination_map_manager.spawn_chunk_and_get_structure(
         portal.destination_tile_pos,
         &chunk_query,
@@ -82,7 +84,6 @@ pub fn portal_collision_handler(
         &mut commands,
         &mut message_recalculate,
     ) {
-        // make sure the target_portal doesn't teleport back the unit instantly
         if portal_query.get(target_portal_entity).is_ok() {
             let current_tick = game_time.ticks;
             collision_history
@@ -91,6 +92,17 @@ pub fn portal_collision_handler(
         }
     }
 
+    // cancel teleportation if target isn't walkable
+    if !destination_map_manager.is_tile_walkable(
+        portal.destination_tile_pos,
+        &structure_query,
+        &chunk_query,
+    ) {
+        println!("Teleportation cancel because destination tile isn't walkable");
+        return;
+    }
+
+    // teleports the unit
     unit_grid_pos.0 = portal.destination_tile_pos;
     unit_current_map_id.0 = portal.destination_map_id;
 
