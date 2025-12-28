@@ -137,7 +137,6 @@ pub fn generic_collision_filter_handler(
     }
 
     if should_trigger {
-        println!("should_trigger");
         collision_history
             .interactions
             .insert(event.entity, (current_tick, current_tick));
@@ -147,7 +146,6 @@ pub fn generic_collision_filter_handler(
             source: event.source,
         });
     } else {
-        println!("!should_trigger");
         if let Some(last) = last_effect_tick {
             collision_history
                 .interactions

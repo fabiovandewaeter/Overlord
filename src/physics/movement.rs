@@ -129,8 +129,6 @@ pub fn apply_desired_movement_system(
         if map_manager.can_move_between(grid_pos.0, target_tile, &structure_query, &chunk_query)
             && !is_tile_occupied_by_unit
         {
-            occupied_by_unit.remove(&(grid_pos.0, current_map_id.0));
-
             // moves the unit
             grid_pos.0 = target_tile;
             current_map_id.0 = target_map_id;
@@ -138,6 +136,8 @@ pub fn apply_desired_movement_system(
             desired_movement.tile = None;
             desired_movement.map_id = None;
 
+            // update occupied_by_unit
+            occupied_by_unit.remove(&(grid_pos.0, current_map_id.0));
             occupied_by_unit.insert((target_tile, target_map_id));
 
             // clear collision_history

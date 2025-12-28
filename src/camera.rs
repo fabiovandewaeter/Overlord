@@ -1,6 +1,6 @@
 use crate::{
     map::{CurrentMapId, MapRoot, TILE_SIZE},
-    units::Player,
+    units::{Player, Unit},
 };
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
@@ -135,17 +135,29 @@ pub fn handle_camera_inputs_system(
     }
 }
 
-pub fn update_map_visibility_system(
+/// when camera changes map, hides previous map and its units and show new map and its units
+pub fn update_map_visibility_camera_change_map_system(
     camera_query: Query<&CurrentMapId, (With<Camera>, Changed<CurrentMapId>)>,
     mut map_root_query: Query<(&MapRoot, &mut Visibility)>,
+    mut unit_query: Query<(&CurrentMapId, &mut Visibility), (With<Unit>, Without<MapRoot>)>,
 ) {
-    if let Ok(camera_map_id) = camera_query.single() {
-        for (map_root, mut visibility) in map_root_query.iter_mut() {
-            if map_root.0 == camera_map_id.0 {
-                *visibility = Visibility::Inherited;
-            } else {
-                *visibility = Visibility::Hidden;
-            }
+    let Ok(camera_map_id) = camera_query.single() else {
+        return;
+    };
+
+    for (map_root, mut visibility) in map_root_query.iter_mut() {
+        if map_root.0 == camera_map_id.0 {
+            *visibility = Visibility::Inherited;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+
+    for (unit_map_id, mut visibility) in unit_query.iter_mut() {
+        if unit_map_id.0 == camera_map_id.0 {
+            *visibility = Visibility::Inherited;
+        } else {
+            *visibility = Visibility::Hidden;
         }
     }
 }

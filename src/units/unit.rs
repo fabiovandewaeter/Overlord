@@ -101,3 +101,21 @@ pub fn units_follow_field_system(
         }
     }
 }
+
+/// when units change map, hide them if its not on camera current map
+pub fn update_units_visibility_unit_change_map_system(
+    camera_query: Query<&CurrentMapId, With<Camera>>,
+    mut unit_query: Query<(&CurrentMapId, &mut Visibility), (With<Unit>, Changed<CurrentMapId>)>,
+) {
+    let Ok(camera_map_id) = camera_query.single() else {
+        return;
+    };
+
+    for (unit_map_id, mut visibility) in unit_query.iter_mut() {
+        if unit_map_id.0 == camera_map_id.0 {
+            *visibility = Visibility::Inherited;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+}

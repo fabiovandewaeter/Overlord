@@ -3,7 +3,7 @@ use overlord::{
     FixedSet, GameSet,
     camera::{
         CameraMovement, CameraMovementKind, DayNightOverlay, handle_camera_inputs_system,
-        update_map_visibility_system,
+        update_map_visibility_camera_change_map_system,
     },
     items::recipe::RecipeBook,
     loading::{LoadingPlugin, LoadingState},
@@ -17,7 +17,10 @@ use overlord::{
         GameTime, UpsCounter, day_night_cycle_system, display_fps_ups_system,
         fixed_update_counter_system,
     },
-    units::{Player, PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin},
+    units::{
+        Player, PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin,
+        update_units_visibility_unit_change_map_system,
+    },
 };
 
 fn main() {
@@ -59,7 +62,8 @@ fn main() {
             Update,
             (
                 handle_camera_inputs_system.in_set(GameSet::Input),
-                update_map_visibility_system.in_set(GameSet::Input),
+                update_map_visibility_camera_change_map_system.in_set(GameSet::Input),
+                update_units_visibility_unit_change_map_system.in_set(GameSet::Input),
                 display_fps_ups_system.in_set(GameSet::UI),
                 day_night_cycle_system.in_set(GameSet::Visual),
                 // control_time_system,
