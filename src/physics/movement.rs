@@ -9,6 +9,7 @@ use crate::{
         coordinates::{GridPosition, TileCoordinates, tile_coord_to_absolute_coord},
         structure::Structure,
     },
+    physics::collision_event::Collision,
     time::GameTime,
     units::Unit,
 };
@@ -79,8 +80,9 @@ impl Default for DesiredMovement {
 }
 
 pub fn apply_desired_movement_system(
-    mut query: Query<
+    mut unit_query: Query<
         (
+            Entity,
             &mut GridPosition,
             &mut CurrentMapId,
             &mut MovementAccumulator,
@@ -91,14 +93,20 @@ pub fn apply_desired_movement_system(
     structure_query: Query<Has<Passable>, With<Structure>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     multi_map_manager: Res<MultiMapManager>,
+    mut commands: Commands,
 ) {
     let mut occupied_by_unit: HashSet<(TileCoordinates, MapId)> = HashSet::new();
-    for (grid_pos, map_id, _, _) in query.iter() {
+    for (_, grid_pos, map_id, _, _) in unit_query.iter() {
         occupied_by_unit.insert((grid_pos.0, map_id.0));
     }
 
-    for (mut grid_pos, mut current_map_id, mut movement_accumulator, mut desired_movement) in
-        query.iter_mut()
+    for (
+        unit_entity,
+        mut grid_pos,
+        mut current_map_id,
+        mut movement_accumulator,
+        mut desired_movement,
+    ) in unit_query.iter_mut()
     {
         let Some(target_tile) = desired_movement.tile else {
             continue;
@@ -121,18 +129,38 @@ pub fn apply_desired_movement_system(
         {
             occupied_by_unit.remove(&(grid_pos.0, current_map_id.0));
 
+            // moves the unit
             grid_pos.0 = target_tile;
             current_map_id.0 = target_map_id;
-
             movement_accumulator.0 -= MovementAccumulator::MOVEMENT_COST;
-
             desired_movement.tile = None;
             desired_movement.map_id = None;
 
             occupied_by_unit.insert((target_tile, target_map_id));
+
+            // trigger collision because it's either an empty tile or a passable structure
+            if let Some(structure_entity) = map_manager.get_structure(target_tile, &chunk_query) {
+                commands.trigger(Collision {
+                    entity: structure_entity,
+                    source: unit_entity,
+                })
+            }
         } else {
             // so unit doesn't get stuck
             desired_movement.tile = None;
+            desired_movement.map_id = None;
+
+            // trigger collision if it's not a passable structure because it means it hits a wall for example
+            // collisions with passable structure are only triggered if the movement succeded
+            if let Some(structure_entity) = map_manager.get_structure(target_tile, &chunk_query) {
+                let is_passable = structure_query.get(structure_entity).unwrap();
+                if !is_passable {
+                    commands.trigger(Collision {
+                        entity: structure_entity,
+                        source: unit_entity,
+                    })
+                }
+            }
         }
     }
 }

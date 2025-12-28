@@ -60,6 +60,8 @@ pub fn portal_collision_handler(
     let Ok(portal) = portal_query.get(event.entity) else {
         return;
     };
+    println!("portal_collision_handler");
+
     let (mut unit_desired_movement, mut collision_history) =
         unit_query.get_mut(event.source).unwrap();
 

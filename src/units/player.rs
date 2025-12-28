@@ -63,7 +63,6 @@ pub fn player_control_system(
     }
 
     let mut delta = IVec2::ZERO;
-    let mut has_moved = false;
 
     if input.pressed(KeyCode::KeyW) || input.pressed(KeyCode::ArrowUp) {
         delta.y += 1;
@@ -82,21 +81,20 @@ pub fn player_control_system(
         *direction = Direction::East;
     }
 
-    if delta.x != 0 || delta.y != 0 {
-        has_moved = true;
-
+    if delta != IVec2::ZERO {
         // movement_accumulator.0 = 0.0;
         // movement_accumulator.0 -= MovementAccumulator::MOVEMENT_COST;
-    }
 
-    desired_movement.tile = Some(TileCoordinates {
-        x: grid_pos.0.x + delta.x,
-        y: grid_pos.0.y - delta.y,
-    });
-    desired_movement.map_id = Some(current_map_id.0);
+        desired_movement.tile = Some(TileCoordinates {
+            x: grid_pos.0.x + delta.x,
+            y: grid_pos.0.y - delta.y,
+        });
+        desired_movement.map_id = Some(current_map_id.0);
 
-    // TODO: change to put that after the collisions check
-    if has_moved {
+        // TODO: change to put that after the collisions check
         message_recalculate.write_default();
+    } else {
+        desired_movement.tile = None;
+        desired_movement.map_id = None;
     }
 }

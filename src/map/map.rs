@@ -44,8 +44,6 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MachinePlugin)
             .insert_resource(MultiMapManager::default())
-            //.add_systems(OnEnter(LoadingState::Ready), spawn_first_chunk_system)
-            //.add_systems(PostStartup, spawn_first_chunk_system)
             .add_systems(
                 FixedUpdate,
                 (
@@ -55,12 +53,7 @@ impl Plugin for MapPlugin {
                     .chain()
                     .in_set(FixedSet::Process)
                     .run_if(in_state(LoadingState::Ready)),
-            )
-            //.add_systems(
-                //Update,
-                //update_tileset_image.run_if(in_state(LoadingState::Ready)),
-            //);
-            ;
+            );
     }
 }
 
