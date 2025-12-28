@@ -14,6 +14,7 @@ use crate::{
             tile_coord_to_absolute_coord, tile_coord_to_chunk_coord,
             tile_coord_to_local_tile_coord,
         },
+        resource_node::ResourceNode,
         structure::{
             Structure, StructureBundle, Wall,
             machine::{
@@ -36,9 +37,6 @@ use std::{collections::HashMap, hash::Hash};
 pub const TILE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
 pub const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
 pub const TILE_LAYER: f32 = -1.0;
-pub const RESOURCE_NODE_LAYER: f32 = -0.1;
-pub const PATH_SOURCES_PNG: &'static str = "tiles/resource_nodes/";
-
 pub const DEFAULT_MAP_ID: MapId = MapId(0);
 
 pub struct MapPlugin;
@@ -65,10 +63,6 @@ impl Plugin for MapPlugin {
             ;
     }
 }
-
-/// a tile on the map where mining machine can extract ressources
-#[derive(Component)]
-pub struct ResourceNode(pub ItemStack);
 
 #[derive(Component, Default, Debug)]
 pub struct StructureLayerManager {
@@ -310,14 +304,15 @@ pub fn spawn_one_chunk(
                 } else if is_source {
                     let target_coord = tile_coord_to_absolute_coord(tile_coord);
                     let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, RESOURCE_NODE_LAYER);
+                        Transform::from_xyz(target_coord.x, target_coord.y, ResourceNode::LAYER);
                     let mut item_stack = ItemStack {
                         item_type: ItemType::IronOre,
                         quality: Quality::Standard,
                         quantity: 3,
                     };
                     let mut sprite = Sprite::from_image(
-                        asset_server.load(PATH_SOURCES_PNG.to_owned() + "iron_ore.png"),
+                        asset_server
+                            .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "iron_ore.png"),
                     );
                     if rng.random_bool(0.2) {
                         item_stack = ItemStack {
@@ -326,7 +321,8 @@ pub fn spawn_one_chunk(
                             quantity: 3,
                         };
                         sprite = Sprite::from_image(
-                            asset_server.load(PATH_SOURCES_PNG.to_owned() + "copper_ore.png"),
+                            asset_server
+                                .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "copper_ore.png"),
                         );
                     }
                     let resource_node_entity = commands
