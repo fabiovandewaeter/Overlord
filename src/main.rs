@@ -17,7 +17,7 @@ use overlord::{
         GameTime, UpsCounter, day_night_cycle_system, display_fps_ups_system,
         fixed_update_counter_system,
     },
-    units::{PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin},
+    units::{Player, PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin},
 };
 
 fn main() {
@@ -119,7 +119,6 @@ fn setup_system(
     );
 
     // Units + Player
-    let player_texture_handle = asset_server.load("default.png");
     let coordinates = Coordinates { x: 0.0, y: 0.0 };
     let tile_coord = coord_to_tile_coord(coordinates);
     let unit_bundle = UnitBundle::new(
@@ -129,7 +128,10 @@ fn setup_system(
         SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
     );
     let bundle = PlayerBundle::new(unit_bundle);
-    commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
+    commands.spawn((
+        bundle,
+        Sprite::from_image(asset_server.load(Player::PATH_PNG).clone()),
+    ));
 
     let coordinates = Coordinates { x: 0.0, y: 5.0 };
     let tile_coord = coord_to_tile_coord(coordinates);
@@ -139,5 +141,8 @@ fn setup_system(
         CurrentMapId(map::DEFAULT_MAP_ID),
         SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
     );
-    commands.spawn((bundle, Sprite::from_image(player_texture_handle.clone())));
+    commands.spawn((
+        bundle,
+        Sprite::from_image(asset_server.load(Unit::PATH_PNG).clone()),
+    ));
 }

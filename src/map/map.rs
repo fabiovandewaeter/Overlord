@@ -36,9 +36,7 @@ use std::{collections::HashMap, hash::Hash};
 pub const TILE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
 pub const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
 pub const TILE_LAYER: f32 = -1.0;
-pub const STRUCTURE_LAYER: f32 = 0.0;
 pub const RESOURCE_NODE_LAYER: f32 = -0.1;
-pub const PATH_STRUCTURES_PNG: &'static str = "structures/";
 pub const PATH_SOURCES_PNG: &'static str = "tiles/resource_nodes/";
 
 pub const DEFAULT_MAP_ID: MapId = MapId(0);
@@ -301,7 +299,8 @@ pub fn spawn_one_chunk(
                             bundle,
                             Wall,
                             Sprite::from_image(
-                                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "wall.png"),
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "wall.png"),
                             ),
                         ))
                         .id();
@@ -353,15 +352,14 @@ pub fn spawn_one_chunk(
                             output_inventory: OutputInventory::default(),
                             mining_machine: MiningMachine::new(item_stack),
                         };
-                        let machine_entity =
-                            commands
-                                .spawn((
-                                    bundle,
-                                    Sprite::from_image(asset_server.load(
-                                        PATH_STRUCTURES_PNG.to_owned() + "mining_machine.png",
-                                    )),
-                                ))
-                                .id();
+                        let machine_entity = commands
+                            .spawn((
+                                bundle,
+                                Sprite::from_image(asset_server.load(
+                                    Structure::PATH_PNG_FOLDER.to_owned() + "mining_machine.png",
+                                )),
+                            ))
+                            .id();
                         structure_layer_manager
                             .structures
                             .insert(local_tile_coord, machine_entity);
@@ -377,7 +375,8 @@ pub fn spawn_one_chunk(
                         .spawn((
                             bundle,
                             Sprite::from_image(
-                                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "portal.png"),
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
                             ),
                         ))
                         .id();
@@ -395,7 +394,8 @@ pub fn spawn_one_chunk(
                         .spawn((
                             bundle,
                             Sprite::from_image(
-                                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "portal.png"),
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
                             ),
                         ))
                         .id();
@@ -435,7 +435,7 @@ pub fn spawn_one_chunk(
         .spawn((
             bundle,
             Sprite::from_image(
-                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "belt_machine.png"),
+                asset_server.load(Structure::PATH_PNG_FOLDER.to_owned() + "belt_machine.png"),
             ),
         ))
         .id();
@@ -464,7 +464,7 @@ pub fn spawn_one_chunk(
         .spawn((
             bundle,
             Sprite::from_image(
-                asset_server.load(PATH_STRUCTURES_PNG.to_owned() + "crafting_machine.png"),
+                asset_server.load(Structure::PATH_PNG_FOLDER.to_owned() + "crafting_machine.png"),
             ),
         ))
         .id();

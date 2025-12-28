@@ -4,15 +4,16 @@ use bevy::{
 };
 
 use crate::{
-    map::{
-        RESOURCE_NODE_LAYER,
-        coordinates::{GridPosition, tile_coord_to_absolute_coord},
-    },
+    map::coordinates::{GridPosition, tile_coord_to_absolute_coord},
     physics::collision_event::CollisionEffectCooldown,
 };
 
 #[derive(Component, Default)]
 pub struct Structure;
+impl Structure {
+    pub const LAYER: f32 = 0.0;
+    pub const PATH_PNG_FOLDER: &'static str = "structures/";
+}
 #[derive(Bundle)]
 pub struct StructureBundle {
     pub transform: Transform,
@@ -29,7 +30,7 @@ impl StructureBundle {
         let transform = Transform::from_xyz(
             absolute_coordinates.x,
             absolute_coordinates.y,
-            RESOURCE_NODE_LAYER,
+            Structure::LAYER,
         );
         Self {
             transform,

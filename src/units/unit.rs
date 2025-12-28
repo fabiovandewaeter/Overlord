@@ -22,9 +22,9 @@ impl Unit {
     pub const DEFAULT_REACH: f32 = 1.0;
     pub const DEFAULT_SCALE_MULTIPLIER: f32 = 0.8;
     pub const DEFAULT_SIZE: f32 = TILE_SIZE.x * Unit::DEFAULT_SCALE_MULTIPLIER;
-    // pub const DEFAULT_MOVEMENT_SPEED: f32 = TILE_SIZE.x * 5.0;
     pub const DEFAULT_TILE_PER_SECOND_SPEED: f32 = 8.0;
     pub const DEFAULT_LAYER: f32 = 1.0;
+    pub const PATH_PNG: &'static str = "default.png";
 }
 
 #[derive(Bundle)]

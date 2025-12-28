@@ -21,6 +21,9 @@ pub enum TurnState {
 
 #[derive(Component)]
 pub struct Player;
+impl Player {
+    pub const PATH_PNG: &'static str = "units/player.png";
+}
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub base: UnitBundle,
