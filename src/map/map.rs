@@ -17,7 +17,7 @@ use crate::{
         fog::ChunkFogOfWar,
         resource_node::ResourceNode,
         structure::{
-            BlockSight, Structure, StructureBundle, Wall, WallBundle,
+            BlockSight, Structure, StructureBundle, WallBundle,
             machine::{
                 BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
                 MachineBaseBundle, MachinePlugin, MiningMachine, MiningMachineBundle,
@@ -348,128 +348,128 @@ pub fn spawn_one_chunk(
                 y: y as i32,
             };
 
-            // let is_wall = rng.random_bool(0.2);
-            // let is_source = rng.random_bool(0.2);
-            // if (local_tile_coord.x > 2) && (local_tile_coord.y > 2) {
-            //     let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
-            //     if is_wall {
-            //         let bundle = StructureBundle::new(
-            //             GridPosition(tile_coord),
-            //             CollisionEffectCooldown::EVERY_SECOND,
-            //         );
-            //         let wall_bundle = WallBundle::new(bundle);
-            //         let wall_entity = commands
-            //             .spawn((
-            //                 wall_bundle,
-            //                 Sprite::from_image(
-            //                     asset_server
-            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "wall.png"),
-            //                 ),
-            //             ))
-            //             .id();
-            //         structure_layer_manager
-            //             .structures
-            //             .insert(local_tile_coord, wall_entity);
-            //     } else if is_source {
-            //         let target_coord = tile_coord_to_absolute_coord(tile_coord);
-            //         let transform =
-            //             Transform::from_xyz(target_coord.x, target_coord.y, ResourceNode::LAYER);
-            //         let mut item_stack = ItemStack {
-            //             item_type: ItemType::IronOre,
-            //             quality: Quality::Standard,
-            //             quantity: 3,
-            //         };
-            //         let mut sprite = Sprite::from_image(
-            //             asset_server
-            //                 .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "iron_ore.png"),
-            //         );
-            //         if rng.random_bool(0.2) {
-            //             item_stack = ItemStack {
-            //                 item_type: ItemType::CopperOre,
-            //                 quality: Quality::Standard,
-            //                 quantity: 3,
-            //             };
-            //             sprite = Sprite::from_image(
-            //                 asset_server
-            //                     .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "copper_ore.png"),
-            //             );
-            //         }
-            //         let resource_node_entity = commands
-            //             .spawn((ResourceNode(item_stack), sprite, transform))
-            //             .id();
-            //         resource_node_layer_manager
-            //             .sources
-            //             .insert(local_tile_coord, resource_node_entity);
+            let is_wall = rng.random_bool(0.2);
+            let is_source = rng.random_bool(0.2);
+            if (local_tile_coord.x > 2) && (local_tile_coord.y > 2) {
+                let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
+                if is_wall {
+                    let bundle = StructureBundle::new(
+                        GridPosition(tile_coord),
+                        CollisionEffectCooldown::EVERY_SECOND,
+                    );
+                    let wall_bundle = WallBundle::new(bundle);
+                    let wall_entity = commands
+                        .spawn((
+                            wall_bundle,
+                            Sprite::from_image(
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "wall.png"),
+                            ),
+                        ))
+                        .id();
+                    structure_layer_manager
+                        .structures
+                        .insert(local_tile_coord, wall_entity);
+                } else if is_source {
+                    let target_coord = tile_coord_to_absolute_coord(tile_coord);
+                    let transform =
+                        Transform::from_xyz(target_coord.x, target_coord.y, ResourceNode::LAYER);
+                    let mut item_stack = ItemStack {
+                        item_type: ItemType::IronOre,
+                        quality: Quality::Standard,
+                        quantity: 3,
+                    };
+                    let mut sprite = Sprite::from_image(
+                        asset_server
+                            .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "iron_ore.png"),
+                    );
+                    if rng.random_bool(0.2) {
+                        item_stack = ItemStack {
+                            item_type: ItemType::CopperOre,
+                            quality: Quality::Standard,
+                            quantity: 3,
+                        };
+                        sprite = Sprite::from_image(
+                            asset_server
+                                .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "copper_ore.png"),
+                        );
+                    }
+                    let resource_node_entity = commands
+                        .spawn((ResourceNode(item_stack), sprite, transform))
+                        .id();
+                    resource_node_layer_manager
+                        .sources
+                        .insert(local_tile_coord, resource_node_entity);
 
-            //         if local_tile_coord.x < 5 && local_tile_coord.y < 5 {
-            //             let bundle = MiningMachineBundle {
-            //                 base: MachineBaseBundle {
-            //                     name: Name::new("Mining machine"),
-            //                     // structure: Structure,
-            //                     structure_bundle: StructureBundle::new(
-            //                         GridPosition(tile_coord),
-            //                         CollisionEffectCooldown::EVERY_SECOND,
-            //                     ),
-            //                     direction: Direction::North,
-            //                     // transform,
-            //                     machine: Machine::default(),
-            //                 },
-            //                 output_inventory: OutputInventory::default(),
-            //                 block_sight: BlockSight,
-            //                 mining_machine: MiningMachine::new(item_stack),
-            //             };
-            //             let machine_entity = commands
-            //                 .spawn((
-            //                     bundle,
-            //                     Sprite::from_image(asset_server.load(
-            //                         Structure::PATH_PNG_FOLDER.to_owned() + "mining_machine.png",
-            //                     )),
-            //                 ))
-            //                 .id();
-            //             structure_layer_manager
-            //                 .structures
-            //                 .insert(local_tile_coord, machine_entity);
-            //         }
-            //     } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
-            //         let bundle = PortalBundle::new(
-            //             "Portail vers (0, 0)".into(),
-            //             GridPosition(tile_coord),
-            //             MapId(1),
-            //             TileCoordinates { x: 0, y: 0 },
-            //         );
-            //         let portal_entity = commands
-            //             .spawn((
-            //                 bundle,
-            //                 Sprite::from_image(
-            //                     asset_server
-            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
-            //                 ),
-            //             ))
-            //             .id();
-            //         structure_layer_manager
-            //             .structures
-            //             .insert(local_tile_coord, portal_entity);
-            //     } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
-            //         let bundle = PortalBundle::new(
-            //             "Portail vers (10, 10)".into(),
-            //             GridPosition(tile_coord),
-            //             DEFAULT_MAP_ID,
-            //             TileCoordinates { x: 10, y: 10 },
-            //         );
-            //         let portal_entity = commands
-            //             .spawn((
-            //                 bundle,
-            //                 Sprite::from_image(
-            //                     asset_server
-            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
-            //                 ),
-            //             ))
-            //             .id();
-            //         structure_layer_manager
-            //             .structures
-            //             .insert(local_tile_coord, portal_entity);
-            //     }
-            // }
+                    if local_tile_coord.x < 5 && local_tile_coord.y < 5 {
+                        let bundle = MiningMachineBundle {
+                            base: MachineBaseBundle {
+                                name: Name::new("Mining machine"),
+                                // structure: Structure,
+                                structure_bundle: StructureBundle::new(
+                                    GridPosition(tile_coord),
+                                    CollisionEffectCooldown::EVERY_SECOND,
+                                ),
+                                direction: Direction::North,
+                                // transform,
+                                machine: Machine::default(),
+                            },
+                            output_inventory: OutputInventory::default(),
+                            block_sight: BlockSight,
+                            mining_machine: MiningMachine::new(item_stack),
+                        };
+                        let machine_entity = commands
+                            .spawn((
+                                bundle,
+                                Sprite::from_image(asset_server.load(
+                                    Structure::PATH_PNG_FOLDER.to_owned() + "mining_machine.png",
+                                )),
+                            ))
+                            .id();
+                        structure_layer_manager
+                            .structures
+                            .insert(local_tile_coord, machine_entity);
+                    }
+                } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
+                    let bundle = PortalBundle::new(
+                        "Portail vers (0, 0)".into(),
+                        GridPosition(tile_coord),
+                        MapId(1),
+                        TileCoordinates { x: 0, y: 0 },
+                    );
+                    let portal_entity = commands
+                        .spawn((
+                            bundle,
+                            Sprite::from_image(
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
+                            ),
+                        ))
+                        .id();
+                    structure_layer_manager
+                        .structures
+                        .insert(local_tile_coord, portal_entity);
+                } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
+                    let bundle = PortalBundle::new(
+                        "Portail vers (10, 10)".into(),
+                        GridPosition(tile_coord),
+                        DEFAULT_MAP_ID,
+                        TileCoordinates { x: 10, y: 10 },
+                    );
+                    let portal_entity = commands
+                        .spawn((
+                            bundle,
+                            Sprite::from_image(
+                                asset_server
+                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
+                            ),
+                        ))
+                        .id();
+                    structure_layer_manager
+                        .structures
+                        .insert(local_tile_coord, portal_entity);
+                }
+            }
         }
     }
 

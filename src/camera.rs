@@ -12,6 +12,9 @@ pub const ZOOM_OUT_SPEED: f32 = 4.0 * 400000000.0;
 pub const CAMERA_SPEED: f32 = 37.5;
 
 #[derive(Component)]
+pub struct DayNightOverlay;
+
+#[derive(Component)]
 pub struct CameraMovement(pub CameraMovementKind);
 
 #[derive(Clone, Copy)]
@@ -146,7 +149,6 @@ pub fn update_map_visibility_camera_change_map_system(
     new_units_added: Query<(), (Added<Unit>, Without<MapRoot>)>,
 
     mut map_root_query: Query<(&MapRoot, &mut Visibility)>,
-    mut unit_query: Query<(&CurrentMapId, &mut Visibility), (With<Unit>, Without<MapRoot>)>,
 ) {
     let Ok(camera_map_id) = camera_query.single() else {
         return;
@@ -162,17 +164,5 @@ pub fn update_map_visibility_camera_change_map_system(
                 *visibility = Visibility::Hidden;
             }
         }
-
-        // updates visibility for units
-        for (unit_map_id, mut visibility) in unit_query.iter_mut() {
-            if unit_map_id.0 == camera_map_id.0 {
-                *visibility = Visibility::Inherited;
-            } else {
-                *visibility = Visibility::Hidden;
-            }
-        }
     }
 }
-
-#[derive(Component)]
-pub struct DayNightOverlay;

@@ -50,10 +50,10 @@ impl Plugin for PhysicsPlugin {
                 (
                     update_fov_system,
                     update_units_visibility_fov_system,
-                    apply_fog_to_tilemap_system,
                     apply_fog_to_objects_system,
+                    apply_fog_to_tilemap_system,
                 )
-                    // .in_set(FixedSet::Visual),
+                    .chain()
                     .in_set(GameSet::Visual),
             )
                 .run_if(in_state(LoadingState::Ready)),
