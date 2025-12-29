@@ -16,6 +16,7 @@ use std::collections::HashSet;
 
 pub const DEFAULT_FOV: i32 = 19;
 pub const FOV_CONE_ANGLE: f32 = 120.0;
+pub const MIN_FOV_RADIUS: f32 = 2.5;
 
 /// Calcule les tuiles visibles.
 /// `origin`: Position du joueur
@@ -173,30 +174,29 @@ pub fn update_fov_system(
     });
 
     let facing_vec = facing_direction.to_vec2();
-    // Calcul du seuil (Cosinus de la moitié de l'angle)
-    // Exemple : Pour 120°, moitié = 60°. Cos(60°) = 0.5.
-    // Tout produit scalaire > 0.5 est dans le cône.
     let half_angle_rad = (FOV_CONE_ANGLE / 2.0).to_radians();
     let threshold = half_angle_rad.cos();
+    let min_radius_sq = MIN_FOV_RADIUS * MIN_FOV_RADIUS;
 
     // 3. Appliquer le FOV aux chunks
     for tile in visible_tiles {
-        if tile == player_pos.0 {
+        // checks if its close enought in circle
+        let dist = Vec2::new(
+            (tile.x - player_pos.0.x) as f32,
+            (tile.y - player_pos.0.y) as f32,
+        );
+        let dist_sq = dist.length_squared();
+        if dist_sq <= min_radius_sq {
             apply_fog_to_tile(tile, map_manager, &mut chunk_query);
             continue;
         }
 
-        // B. Calculer le vecteur vers la tuile cible
-        let tile_vec = Vec2::new(
-            (tile.x - player_pos.0.x) as f32,
-            (tile.y - player_pos.0.y) as f32,
-        )
-        .normalize_or_zero(); // Important pour éviter la division par zéro
-
-        // C. Produit Scalaire
-        let dot_product = facing_vec.dot(tile_vec);
-
-        // D. Si c'est dans le cône, on affiche
+        // checks if it's in front of the player
+        if tile == player_pos.0 {
+            apply_fog_to_tile(tile, map_manager, &mut chunk_query);
+            continue;
+        }
+        let dot_product = facing_vec.dot(dist.normalize_or_zero());
         if dot_product >= threshold {
             apply_fog_to_tile(tile, map_manager, &mut chunk_query);
         }
