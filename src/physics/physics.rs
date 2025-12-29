@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use crate::{
     FixedSet, GameSet,
     loading::LoadingState,
-    map::structure::portal::portal_collision_handler,
+    map::{
+        fog::{apply_fog_to_objects_system, apply_fog_to_tilemap_system},
+        structure::portal::portal_collision_handler,
+    },
     physics::{
         collision_event::{
             generic_collision_filter_handler, machine_collision_handler,
@@ -14,7 +17,10 @@ use crate::{
             update_units_movement_accumulators_system,
         },
     },
-    units::{player_control_system, player_mouse_input_system, units_follow_field_system},
+    units::{
+        fov::{update_fov_system, update_units_visibility_fov_system},
+        player_control_system, player_mouse_input_system, units_follow_field_system,
+    },
 };
 
 pub struct PhysicsPlugin;
@@ -41,6 +47,14 @@ impl Plugin for PhysicsPlugin {
             (
                 sync_grid_pos_to_transform_system.in_set(GameSet::Visual),
                 player_mouse_input_system.in_set(GameSet::Input),
+                (
+                    update_fov_system,
+                    update_units_visibility_fov_system,
+                    apply_fog_to_tilemap_system,
+                    apply_fog_to_objects_system,
+                )
+                    // .in_set(FixedSet::Visual),
+                    .in_set(GameSet::Visual),
             )
                 .run_if(in_state(LoadingState::Ready)),
         )

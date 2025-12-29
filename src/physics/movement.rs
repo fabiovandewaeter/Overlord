@@ -91,7 +91,7 @@ pub fn apply_desired_movement_system(
         ),
         With<Unit>,
     >,
-    structure_query: Query<Has<Passable>, With<Structure>>,
+    structure_query: Query<(), (With<Passable>, With<Structure>)>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     multi_map_manager: Res<MultiMapManager>,
     mut commands: Commands,
@@ -158,8 +158,7 @@ pub fn apply_desired_movement_system(
             // trigger collision if it's not a passable structure because it means it hits a wall for example
             // collisions with passable structure are only triggered if the movement succeded
             if let Some(structure_entity) = map_manager.get_structure(target_tile, &chunk_query) {
-                let is_passable = structure_query.get(structure_entity).unwrap();
-                if !is_passable {
+                if structure_query.get(structure_entity).is_ok() {
                     commands.trigger(Collision {
                         entity: structure_entity,
                         source: unit_entity,

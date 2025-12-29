@@ -14,9 +14,10 @@ use crate::{
             tile_coord_to_absolute_coord, tile_coord_to_chunk_coord,
             tile_coord_to_local_tile_coord,
         },
+        fog::ChunkFogOfWar,
         resource_node::ResourceNode,
         structure::{
-            Structure, StructureBundle, Wall,
+            BlockSight, Structure, StructureBundle, Wall, WallBundle,
             machine::{
                 BeltMachine, BeltMachineBundle, CraftingMachine, CraftingMachineBundle, Machine,
                 MachineBaseBundle, MachinePlugin, MiningMachine, MiningMachineBundle,
@@ -34,7 +35,7 @@ use bevy::{
 use rand::Rng;
 use std::{collections::HashMap, hash::Hash};
 
-pub const TILE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
+pub const TILE_SIZE: UVec2 = UVec2 { x: 16, y: 16 };
 pub const CHUNK_SIZE: UVec2 = UVec2 { x: 32, y: 32 };
 pub const TILE_LAYER: f32 = -1.0;
 pub const DEFAULT_MAP_ID: MapId = MapId(0);
@@ -75,6 +76,20 @@ pub struct MapId(pub u32);
 #[derive(Component, Default, Debug, Clone, Copy)]
 pub struct CurrentMapId(pub MapId);
 
+pub trait TilemapChunkExt {
+    fn new(tileset: Handle<Image>) -> Self;
+}
+impl TilemapChunkExt for TilemapChunk {
+    fn new(tileset: Handle<Image>) -> Self {
+        Self {
+            chunk_size: CHUNK_SIZE,
+            tile_display_size: TILE_SIZE,
+            tileset,
+            ..default()
+        }
+    }
+}
+
 #[derive(Bundle)]
 pub struct ChunkBundle {
     pub tilemap_chunk: TilemapChunk,
@@ -82,6 +97,40 @@ pub struct ChunkBundle {
     pub structure_layer_manager: StructureLayerManager,
     pub resource_node_layer_manager: ResourceNodeLayerManager,
     pub transform: Transform,
+    pub chunk_for_of_war: ChunkFogOfWar,
+}
+impl ChunkBundle {
+    pub fn new(
+        chunk_coord: ChunkCoordinates,
+        tilemap_chunk: TilemapChunk,
+        tilemap_chunk_tile_data: TilemapChunkTileData,
+        structure_layer_manager: StructureLayerManager,
+        resource_node_layer_manager: ResourceNodeLayerManager,
+    ) -> Self {
+        Self {
+            tilemap_chunk,
+            tilemap_chunk_tile_data,
+            structure_layer_manager,
+            resource_node_layer_manager,
+            transform: Transform::from_translation(Self::get_chunk_transform(chunk_coord)),
+            chunk_for_of_war: ChunkFogOfWar::default(),
+        }
+    }
+
+    pub fn get_chunk_center(chunk_coord: ChunkCoordinates) -> Vec2 {
+        let chunk_center_x = (chunk_coord.x as f32 * CHUNK_SIZE.x as f32
+            + CHUNK_SIZE.x as f32 / 2.0)
+            * TILE_SIZE.x as f32;
+        let chunk_center_y = -(chunk_coord.y as f32 * CHUNK_SIZE.y as f32
+            + CHUNK_SIZE.y as f32 / 2.0)
+            * TILE_SIZE.y as f32;
+        Vec2::new(chunk_center_x, chunk_center_y)
+    }
+
+    pub fn get_chunk_transform(chunk_coord: ChunkCoordinates) -> Vec3 {
+        let chunk_center = Self::get_chunk_center(chunk_coord);
+        Vec3::new(chunk_center.x, chunk_center.y, TILE_LAYER)
+    }
 }
 
 /// all chunks of the map are children of this entity; usefull to change visibility or despawn
@@ -91,7 +140,7 @@ pub struct MapRoot(pub MapId);
 pub struct MapManager {
     /// MapRoot; all chunks of the map are children of this entity; usefull to change visibility or despawn
     root_entity: Entity,
-    chunks: HashMap<ChunkCoordinates, Entity>,
+    pub chunks: HashMap<ChunkCoordinates, Entity>,
 }
 impl MapManager {
     pub fn new(map_id: MapId, commands: &mut Commands) -> Self {
@@ -154,7 +203,7 @@ impl MapManager {
     pub fn is_tile_walkable(
         &self,
         tile: TileCoordinates,
-        structure_query: &Query<Has<Passable>, With<Structure>>,
+        passable_structure_query: &Query<(), (With<Passable>, With<Structure>)>,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
         let chunk_coord = tile_coord_to_chunk_coord(tile);
@@ -164,10 +213,29 @@ impl MapManager {
         }
 
         if let Some(structure_entity) = self.get_structure(tile, chunk_query) {
-            let is_passable = structure_query.get(structure_entity).unwrap();
-            return is_passable;
+            return passable_structure_query.get(structure_entity).is_ok();
         }
+
         true
+    }
+
+    pub fn is_sight_blocking(
+        &self,
+        tile: TileCoordinates,
+        block_sight_structure_query: &Query<(), (With<BlockSight>, With<Structure>)>,
+        chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
+    ) -> bool {
+        let chunk_coord = tile_coord_to_chunk_coord(tile);
+
+        if !self.chunks.contains_key(&chunk_coord) {
+            return true;
+        }
+
+        if let Some(structure_entity) = self.get_structure(tile, chunk_query) {
+            return block_sight_structure_query.get(structure_entity).is_ok();
+        }
+
+        false
     }
 
     /// returns true if is_tile_walkable() returns true AND if the movement isn't blocked by diagonal
@@ -175,7 +243,7 @@ impl MapManager {
         &self,
         start: TileCoordinates,
         end: TileCoordinates,
-        structure_query: &Query<Has<Passable>, With<Structure>>,
+        structure_query: &Query<(), (With<Passable>, With<Structure>)>,
         chunk_query: &Query<&StructureLayerManager, With<TilemapChunk>>,
     ) -> bool {
         if !self.is_tile_walkable(end, &structure_query, &chunk_query) {
@@ -211,10 +279,12 @@ impl MapManager {
     pub fn insert_chunk_and_children(
         &mut self,
         chunk_coord: ChunkCoordinates,
-        chunk_entity: Entity,
+        chunk_bundle: ChunkBundle,
         children: &[Entity], // structures and resource nodes
         commands: &mut Commands,
     ) {
+        let chunk_entity = commands.spawn(chunk_bundle).id();
+
         // make the chunk, structures and resource nodes children of root_entity
         commands.entity(self.root_entity).add_child(chunk_entity);
         commands.entity(self.root_entity).add_children(children);
@@ -278,127 +348,128 @@ pub fn spawn_one_chunk(
                 y: y as i32,
             };
 
-            let is_wall = rng.random_bool(0.2);
-            let is_source = rng.random_bool(0.2);
-            if (local_tile_coord.x > 2) && (local_tile_coord.y > 2) {
-                let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
-                if is_wall {
-                    let bundle = StructureBundle::new(
-                        GridPosition(tile_coord),
-                        CollisionEffectCooldown::EVERY_SECOND,
-                    );
-                    let wall_entity = commands
-                        .spawn((
-                            bundle,
-                            Wall,
-                            Sprite::from_image(
-                                asset_server
-                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "wall.png"),
-                            ),
-                        ))
-                        .id();
-                    structure_layer_manager
-                        .structures
-                        .insert(local_tile_coord, wall_entity);
-                } else if is_source {
-                    let target_coord = tile_coord_to_absolute_coord(tile_coord);
-                    let transform =
-                        Transform::from_xyz(target_coord.x, target_coord.y, ResourceNode::LAYER);
-                    let mut item_stack = ItemStack {
-                        item_type: ItemType::IronOre,
-                        quality: Quality::Standard,
-                        quantity: 3,
-                    };
-                    let mut sprite = Sprite::from_image(
-                        asset_server
-                            .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "iron_ore.png"),
-                    );
-                    if rng.random_bool(0.2) {
-                        item_stack = ItemStack {
-                            item_type: ItemType::CopperOre,
-                            quality: Quality::Standard,
-                            quantity: 3,
-                        };
-                        sprite = Sprite::from_image(
-                            asset_server
-                                .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "copper_ore.png"),
-                        );
-                    }
-                    let resource_node_entity = commands
-                        .spawn((ResourceNode(item_stack), sprite, transform))
-                        .id();
-                    resource_node_layer_manager
-                        .sources
-                        .insert(local_tile_coord, resource_node_entity);
+            // let is_wall = rng.random_bool(0.2);
+            // let is_source = rng.random_bool(0.2);
+            // if (local_tile_coord.x > 2) && (local_tile_coord.y > 2) {
+            //     let tile_coord = local_tile_coord_to_tile_coord(local_tile_coord, chunk_coord);
+            //     if is_wall {
+            //         let bundle = StructureBundle::new(
+            //             GridPosition(tile_coord),
+            //             CollisionEffectCooldown::EVERY_SECOND,
+            //         );
+            //         let wall_bundle = WallBundle::new(bundle);
+            //         let wall_entity = commands
+            //             .spawn((
+            //                 wall_bundle,
+            //                 Sprite::from_image(
+            //                     asset_server
+            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "wall.png"),
+            //                 ),
+            //             ))
+            //             .id();
+            //         structure_layer_manager
+            //             .structures
+            //             .insert(local_tile_coord, wall_entity);
+            //     } else if is_source {
+            //         let target_coord = tile_coord_to_absolute_coord(tile_coord);
+            //         let transform =
+            //             Transform::from_xyz(target_coord.x, target_coord.y, ResourceNode::LAYER);
+            //         let mut item_stack = ItemStack {
+            //             item_type: ItemType::IronOre,
+            //             quality: Quality::Standard,
+            //             quantity: 3,
+            //         };
+            //         let mut sprite = Sprite::from_image(
+            //             asset_server
+            //                 .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "iron_ore.png"),
+            //         );
+            //         if rng.random_bool(0.2) {
+            //             item_stack = ItemStack {
+            //                 item_type: ItemType::CopperOre,
+            //                 quality: Quality::Standard,
+            //                 quantity: 3,
+            //             };
+            //             sprite = Sprite::from_image(
+            //                 asset_server
+            //                     .load(ResourceNode::PATH_PNG_FOLDER.to_owned() + "copper_ore.png"),
+            //             );
+            //         }
+            //         let resource_node_entity = commands
+            //             .spawn((ResourceNode(item_stack), sprite, transform))
+            //             .id();
+            //         resource_node_layer_manager
+            //             .sources
+            //             .insert(local_tile_coord, resource_node_entity);
 
-                    if local_tile_coord.x < 5 && local_tile_coord.y < 5 {
-                        let bundle = MiningMachineBundle {
-                            base: MachineBaseBundle {
-                                name: Name::new("Mining machine"),
-                                // structure: Structure,
-                                structure_bundle: StructureBundle::new(
-                                    GridPosition(tile_coord),
-                                    CollisionEffectCooldown::EVERY_SECOND,
-                                ),
-                                direction: Direction::North,
-                                // transform,
-                                machine: Machine::default(),
-                            },
-                            output_inventory: OutputInventory::default(),
-                            mining_machine: MiningMachine::new(item_stack),
-                        };
-                        let machine_entity = commands
-                            .spawn((
-                                bundle,
-                                Sprite::from_image(asset_server.load(
-                                    Structure::PATH_PNG_FOLDER.to_owned() + "mining_machine.png",
-                                )),
-                            ))
-                            .id();
-                        structure_layer_manager
-                            .structures
-                            .insert(local_tile_coord, machine_entity);
-                    }
-                } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
-                    let bundle = PortalBundle::new(
-                        "Portail vers (0, 0)".into(),
-                        GridPosition(tile_coord),
-                        MapId(1),
-                        TileCoordinates { x: 0, y: 0 },
-                    );
-                    let portal_entity = commands
-                        .spawn((
-                            bundle,
-                            Sprite::from_image(
-                                asset_server
-                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
-                            ),
-                        ))
-                        .id();
-                    structure_layer_manager
-                        .structures
-                        .insert(local_tile_coord, portal_entity);
-                } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
-                    let bundle = PortalBundle::new(
-                        "Portail vers (10, 10)".into(),
-                        GridPosition(tile_coord),
-                        DEFAULT_MAP_ID,
-                        TileCoordinates { x: 10, y: 10 },
-                    );
-                    let portal_entity = commands
-                        .spawn((
-                            bundle,
-                            Sprite::from_image(
-                                asset_server
-                                    .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
-                            ),
-                        ))
-                        .id();
-                    structure_layer_manager
-                        .structures
-                        .insert(local_tile_coord, portal_entity);
-                }
-            }
+            //         if local_tile_coord.x < 5 && local_tile_coord.y < 5 {
+            //             let bundle = MiningMachineBundle {
+            //                 base: MachineBaseBundle {
+            //                     name: Name::new("Mining machine"),
+            //                     // structure: Structure,
+            //                     structure_bundle: StructureBundle::new(
+            //                         GridPosition(tile_coord),
+            //                         CollisionEffectCooldown::EVERY_SECOND,
+            //                     ),
+            //                     direction: Direction::North,
+            //                     // transform,
+            //                     machine: Machine::default(),
+            //                 },
+            //                 output_inventory: OutputInventory::default(),
+            //                 block_sight: BlockSight,
+            //                 mining_machine: MiningMachine::new(item_stack),
+            //             };
+            //             let machine_entity = commands
+            //                 .spawn((
+            //                     bundle,
+            //                     Sprite::from_image(asset_server.load(
+            //                         Structure::PATH_PNG_FOLDER.to_owned() + "mining_machine.png",
+            //                     )),
+            //                 ))
+            //                 .id();
+            //             structure_layer_manager
+            //                 .structures
+            //                 .insert(local_tile_coord, machine_entity);
+            //         }
+            //     } else if local_tile_coord.x == 10 && local_tile_coord.y == 10 {
+            //         let bundle = PortalBundle::new(
+            //             "Portail vers (0, 0)".into(),
+            //             GridPosition(tile_coord),
+            //             MapId(1),
+            //             TileCoordinates { x: 0, y: 0 },
+            //         );
+            //         let portal_entity = commands
+            //             .spawn((
+            //                 bundle,
+            //                 Sprite::from_image(
+            //                     asset_server
+            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
+            //                 ),
+            //             ))
+            //             .id();
+            //         structure_layer_manager
+            //             .structures
+            //             .insert(local_tile_coord, portal_entity);
+            //     } else if local_tile_coord.x < 10 && local_tile_coord.y < 10 {
+            //         let bundle = PortalBundle::new(
+            //             "Portail vers (10, 10)".into(),
+            //             GridPosition(tile_coord),
+            //             DEFAULT_MAP_ID,
+            //             TileCoordinates { x: 10, y: 10 },
+            //         );
+            //         let portal_entity = commands
+            //             .spawn((
+            //                 bundle,
+            //                 Sprite::from_image(
+            //                     asset_server
+            //                         .load(Structure::PATH_PNG_FOLDER.to_owned() + "portal.png"),
+            //                 ),
+            //             ))
+            //             .id();
+            //         structure_layer_manager
+            //             .structures
+            //             .insert(local_tile_coord, portal_entity);
+            //     }
+            // }
         }
     }
 
@@ -453,6 +524,7 @@ pub fn spawn_one_chunk(
         },
         input_inventory: InputInventory::default(),
         output_inventory: OutputInventory::default(),
+        block_sight: BlockSight,
         crafting_machine: CraftingMachine::new(RecipeId::IronPlateToIronGear),
     };
     let machine_entity = commands
@@ -468,15 +540,6 @@ pub fn spawn_one_chunk(
         .insert(local_tile_coord, machine_entity);
 
     message_recalculate.write_default();
-
-    let tile_display_size = UVec2::splat(TILE_SIZE.x as u32);
-    let chunk_center_x = (chunk_coord.x as f32 * CHUNK_SIZE.x as f32 + CHUNK_SIZE.x as f32 / 2.0)
-        * tile_display_size.x as f32;
-    let chunk_center_y = -(chunk_coord.y as f32 * CHUNK_SIZE.y as f32 + CHUNK_SIZE.y as f32 / 2.0)
-        * tile_display_size.y as f32;
-
-    let chunk_transform =
-        Transform::from_translation(Vec3::new(chunk_center_x, chunk_center_y, TILE_LAYER));
 
     let tile_data: Vec<Option<TileData>> = (0..CHUNK_SIZE.element_product())
         // .map(|_| rng.random_range(0..5))
@@ -496,21 +559,16 @@ pub fn spawn_one_chunk(
         .copied()
         .chain(resource_node_layer_manager.sources.values().copied())
         .collect();
-    let chunk_bundle = ChunkBundle {
-        tilemap_chunk: TilemapChunk {
-            chunk_size: CHUNK_SIZE,
-            tile_display_size,
-            tileset: asset_server.load("textures/array_texture.png"),
-            //tileset: tileset_handle.0.clone(), // UTILISE LE HANDLE PRÉ-CHARGÉ
-            ..default()
-        },
-        tilemap_chunk_tile_data: TilemapChunkTileData(tile_data),
+
+    let tilemap_chunk = TilemapChunk::new(asset_server.load("textures/array_texture.png"));
+    let chunk_bundle = ChunkBundle::new(
+        chunk_coord,
+        tilemap_chunk,
+        TilemapChunkTileData(tile_data),
         structure_layer_manager,
         resource_node_layer_manager,
-        transform: chunk_transform,
-    };
-    let chunk_entity = commands.spawn(chunk_bundle).id();
-    map_manager.insert_chunk_and_children(chunk_coord, chunk_entity, &all_children, commands);
+    );
+    map_manager.insert_chunk_and_children(chunk_coord, chunk_bundle, &all_children, commands);
 }
 
 fn spawn_chunks_around_units_system(

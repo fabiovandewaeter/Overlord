@@ -1,12 +1,29 @@
-use bevy::{
-    ecs::{bundle::Bundle, component::Component},
-    transform::components::Transform,
-};
-
 use crate::{
     map::coordinates::{GridPosition, tile_coord_to_absolute_coord},
     physics::collision_event::CollisionEffectCooldown,
 };
+use bevy::prelude::*;
+
+#[derive(Component)]
+pub struct Wall;
+#[derive(Bundle)]
+pub struct WallBundle {
+    pub base: StructureBundle,
+    pub block_sight: BlockSight,
+    pub wall: Wall,
+}
+impl WallBundle {
+    pub fn new(base: StructureBundle) -> Self {
+        Self {
+            base,
+            block_sight: BlockSight,
+            wall: Wall,
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct BlockSight;
 
 #[derive(Component, Default)]
 pub struct Structure;
@@ -40,6 +57,3 @@ impl StructureBundle {
         }
     }
 }
-
-#[derive(Component)]
-pub struct Wall;

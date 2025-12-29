@@ -79,7 +79,7 @@ pub struct RecalculateFlowField;
 pub fn calculate_flow_field_system(
     mut message_recalculate: MessageReader<RecalculateFlowField>,
     mut flow_field: ResMut<FlowField>,
-    structure_query: Query<Has<Passable>, With<Structure>>,
+    structure_query: Query<(), (With<Passable>, With<Structure>)>,
     multi_map_manager: Res<MultiMapManager>,
     player_query: Query<(&GridPosition, &CurrentMapId), With<Player>>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,

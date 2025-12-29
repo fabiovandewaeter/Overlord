@@ -9,7 +9,7 @@ use crate::{
     map::{
         CurrentMapId, MultiMapManager, StructureLayerManager,
         coordinates::{TileCoordinates, absolute_coord_to_tile_coord},
-        structure::StructureBundle,
+        structure::{BlockSight, StructureBundle},
     },
     time::GameTime,
 };
@@ -83,6 +83,7 @@ pub struct CraftingMachineBundle {
     pub base: MachineBaseBundle,
     pub input_inventory: InputInventory,
     pub output_inventory: OutputInventory,
+    pub block_sight: BlockSight,
     pub crafting_machine: CraftingMachine,
 }
 impl CraftingMachine {
@@ -106,6 +107,7 @@ pub struct MiningMachine {
 pub struct MiningMachineBundle {
     pub base: MachineBaseBundle,
     pub output_inventory: OutputInventory,
+    pub block_sight: BlockSight,
     pub mining_machine: MiningMachine,
 }
 impl MiningMachine {
@@ -259,7 +261,7 @@ pub fn transfert_items_to_next_machine_system(
         machine_query.iter()
     {
         let source_tile = absolute_coord_to_tile_coord((*transform).into());
-        let delta = direction.direction_to_vec2();
+        let delta = direction.to_ivec2();
         let target_tile = TileCoordinates {
             x: source_tile.x + delta.x,
             y: source_tile.y + delta.y,

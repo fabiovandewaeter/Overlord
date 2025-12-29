@@ -19,8 +19,9 @@ pub enum GameSet {
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum FixedSet {
-    // Order matters: Process -> Move -> Collide
+    // Order matters: Process -> Move -> Collide -> Visual
     Process,
     Movement,
     Collision,
+    Visual,
 }

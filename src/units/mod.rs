@@ -1,3 +1,4 @@
+pub mod fov;
 pub mod pathfinding;
 mod player;
 mod unit;

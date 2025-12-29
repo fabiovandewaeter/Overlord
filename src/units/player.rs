@@ -169,7 +169,7 @@ pub fn player_mouse_input_system(
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut player_query: Query<(&GridPosition, &CurrentMapId, &mut PlayerPath), With<Player>>,
     multi_map_manager: Res<MultiMapManager>,
-    structure_query: Query<Has<Passable>, With<Structure>>,
+    structure_query: Query<(), (With<Passable>, With<Structure>)>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
 ) {
     if !buttons.just_pressed(MouseButton::Right) {

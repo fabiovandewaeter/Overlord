@@ -50,7 +50,7 @@ pub fn portal_collision_handler(
     mut multi_map_manager: ResMut<MultiMapManager>,
     chunk_query: Query<&StructureLayerManager, With<TilemapChunk>>,
     portal_query: Query<&Portal>,
-    structure_query: Query<Has<Passable>, With<Structure>>,
+    structure_query: Query<(), (With<Passable>, With<Structure>)>,
     mut unit_query: Query<
         (
             &mut GridPosition,

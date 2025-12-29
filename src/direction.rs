@@ -9,12 +9,21 @@ pub enum Direction {
     West,
 }
 impl Direction {
-    pub fn direction_to_vec2(&self) -> IVec2 {
+    pub fn to_ivec2(&self) -> IVec2 {
         match self {
             Direction::North => IVec2 { x: 0, y: -1 },
             Direction::East => IVec2 { x: 1, y: 0 },
             Direction::South => IVec2 { x: 0, y: 1 },
             Direction::West => IVec2 { x: -1, y: 0 },
+        }
+    }
+
+    pub fn to_vec2(&self) -> Vec2 {
+        match self {
+            Direction::North => Vec2::new(0.0, -1.0),
+            Direction::East => Vec2::new(1.0, 0.0),
+            Direction::South => Vec2::new(0.0, 1.0),
+            Direction::West => Vec2::new(-1.0, 0.0),
         }
     }
 }

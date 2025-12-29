@@ -93,8 +93,8 @@ pub fn tile_coord_to_local_tile_coord(
 // // adds 0.5 to coordinates to make entities spawn based on the corner of there sprite and not the center
 pub fn tile_coord_to_absolute_coord(tile_coord: TileCoordinates) -> AbsoluteCoordinates {
     AbsoluteCoordinates {
-        x: tile_coord.x as f32 * TILE_SIZE.x + TILE_SIZE.x * 0.5,
-        y: -(tile_coord.y as f32 * TILE_SIZE.y + TILE_SIZE.y * 0.5),
+        x: tile_coord.x as f32 * TILE_SIZE.x as f32 + TILE_SIZE.x as f32 * 0.5,
+        y: -(tile_coord.y as f32 * TILE_SIZE.y as f32 + TILE_SIZE.y as f32 * 0.5),
         // x: tile_coord.x as f32 * TILE_SIZE.x,
         // y: -(tile_coord.y as f32 * TILE_SIZE.y),
     }
@@ -120,8 +120,8 @@ pub fn absolute_coord_to_coord(absolute_coord: AbsoluteCoordinates) -> Coordinat
     Coordinates {
         // x: absolute_coord.x as f32 / TILE_SIZE.x,
         // y: (-absolute_coord.y as f32) / TILE_SIZE.y,
-        x: absolute_coord.x as f32 / TILE_SIZE.x - 0.5,
-        y: (-absolute_coord.y as f32) / TILE_SIZE.y - 0.5,
+        x: absolute_coord.x as f32 / TILE_SIZE.x as f32 - 0.5,
+        y: (-absolute_coord.y as f32) / TILE_SIZE.y as f32 - 0.5,
     }
 }
 
@@ -130,16 +130,16 @@ pub fn absolute_coord_to_tile_coord(absolute_coord: AbsoluteCoordinates) -> Tile
     TileCoordinates {
         // x: ((absolute_coord.x as f32 / TILE_SIZE.x) - 0.5).floor() as i32,
         // y: (((-absolute_coord.y as f32) / TILE_SIZE.y) - 0.5).floor() as i32,
-        x: ((absolute_coord.x as f32 / TILE_SIZE.x) - 0.5).round() as i32,
-        y: (((-absolute_coord.y as f32) / TILE_SIZE.y) - 0.5).round() as i32,
+        x: ((absolute_coord.x as f32 / TILE_SIZE.x as f32) - 0.5).round() as i32,
+        y: (((-absolute_coord.y as f32) / TILE_SIZE.y as f32) - 0.5).round() as i32,
     }
 }
 
 /// Convertit une coordition monde (pixels) en coordition de chunk.
 pub fn absolute_coord_to_chunk_coord(absolute_coord: AbsoluteCoordinates) -> ChunkCoordinates {
     ChunkCoordinates {
-        x: (absolute_coord.x as f32 / (CHUNK_SIZE.x as f32 * TILE_SIZE.x)).floor() as i32,
-        y: ((-absolute_coord.y as f32) / (CHUNK_SIZE.y as f32 * TILE_SIZE.y)).floor() as i32,
+        x: (absolute_coord.x as f32 / (CHUNK_SIZE.x as f32 * TILE_SIZE.x as f32)).floor() as i32,
+        y: ((-absolute_coord.y as f32) / (CHUNK_SIZE.y as f32 * TILE_SIZE.y as f32)).floor() as i32,
     }
 }
 
