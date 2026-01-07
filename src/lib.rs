@@ -1,5 +1,3 @@
-use bevy::ecs::schedule::SystemSet;
-
 pub mod camera;
 pub mod direction;
 pub mod items;
@@ -9,6 +7,28 @@ pub mod physics;
 pub mod loading;
 pub mod time;
 pub mod units;
+
+use crate::{
+    camera::{
+        CameraMovement, CameraMovementKind, DayNightOverlay, handle_camera_inputs_system,
+        update_map_visibility_camera_change_map_system,
+    },
+    items::recipe::RecipeBook,
+    loading::{LoadingPlugin, LoadingState},
+    map::{
+        CurrentMapId, MapManager, MapPlugin, MultiMapManager,
+        coordinates::{Coordinates, GridPosition, coord_to_tile_coord},
+        spawn_first_chunk_system,
+    },
+    physics::{PhysicsPlugin, movement::SpeedStat},
+    time::{
+        GameTime, UpsCounter, day_night_cycle_system, display_fps_ups_system,
+        fixed_update_counter_system,
+    },
+    units::{Player, PlayerBundle, Unit, UnitBundle, pathfinding::PathfindingPlugin},
+};
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::prelude::*;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum GameSet {
@@ -23,4 +43,139 @@ pub enum FixedSet {
     Process,
     Movement,
     Collision,
+}
+
+#[bevy_main]
+fn main() {
+    create_app().run();
+}
+
+pub fn create_app() -> App {
+    let mut app = App::new();
+    app
+        // .configure_sets(Update, (GameSet::Input, GameSet::Visual, GameSet::UI))
+        // .configure_sets(
+        //     FixedUpdate,
+        //     (FixedSet::Process, FixedSet::Movement, FixedSet::Collision).chain(),
+        // )
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Overlord".to_string(),
+                        present_mode: bevy::window::PresentMode::AutoVsync,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
+        .add_plugins(LoadingPlugin)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(PhysicsPlugin)
+        .add_plugins(PathfindingPlugin)
+        .add_plugins(MapPlugin)
+        // .add_plugins(SavePlugin)
+        // .insert_resource(TimeState::default())
+        .insert_resource(GameTime::default())
+        .insert_resource(UpsCounter::default())
+        .insert_resource(RecipeBook::default())
+        .insert_resource(Time::<Fixed>::from_hz(GameTime::UPS_TARGET as f64))
+        //.add_systems(Startup, setup_system.run_if(in_state(LoadingState::Ready)))
+        .add_systems(
+            OnEnter(LoadingState::Ready),
+            (setup_system, spawn_first_chunk_system).chain(),
+        )
+        .add_systems(
+            Update,
+            (
+                handle_camera_inputs_system.in_set(GameSet::Input),
+                update_map_visibility_camera_change_map_system.in_set(GameSet::Input),
+                // update_units_visibility_unit_change_map_system.in_set(GameSet::Input),
+                display_fps_ups_system.in_set(GameSet::UI),
+                day_night_cycle_system.in_set(GameSet::Visual),
+                // control_time_system,
+            )
+                .run_if(in_state(LoadingState::Ready)),
+        )
+        .add_systems(
+            FixedUpdate,
+            (fixed_update_counter_system.in_set(FixedSet::Process),)
+                .run_if(in_state(LoadingState::Ready)),
+        );
+
+    app
+}
+
+fn setup_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut game_time: ResMut<GameTime>,
+    mut multi_map_manager: ResMut<MultiMapManager>,
+) {
+    // Audio
+    commands.spawn((
+        AudioPlayer::new(asset_server.load("audio/gentle-rain.ogg")),
+        PlaybackSettings::LOOP,
+    ));
+
+    // Camera
+    let mut orthographic_projection = OrthographicProjection::default_2d();
+    orthographic_projection.scale *= 0.8;
+    let projection = Projection::Orthographic(orthographic_projection);
+    commands.spawn((
+        Camera2d,
+        Camera { ..default() },
+        projection,
+        CameraMovement(CameraMovementKind::SmoothFollowPlayer),
+        CurrentMapId(map::DEFAULT_MAP_ID),
+    ));
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        BackgroundColor(Color::NONE), // Commence transparent
+        ZIndex(100),                  // S'assure qu'il est au-dessus du jeu
+        DayNightOverlay,
+    ));
+
+    // start daytime in middle of the day
+    game_time.ticks = GameTime::TICKS_PER_DAY / 2;
+
+    // maps
+    multi_map_manager.maps.insert(
+        map::DEFAULT_MAP_ID,
+        MapManager::new(map::DEFAULT_MAP_ID, &mut commands),
+    );
+
+    // Units + Player
+    let coordinates = Coordinates { x: 0.0, y: 0.0 };
+    let tile_coord = coord_to_tile_coord(coordinates);
+    let unit_bundle = UnitBundle::new(
+        Name::new("Player"),
+        GridPosition(tile_coord),
+        CurrentMapId(map::DEFAULT_MAP_ID),
+        SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
+    );
+    let bundle = PlayerBundle::new(unit_bundle);
+    commands.spawn((
+        bundle,
+        Sprite::from_image(asset_server.load(Player::PATH_PNG).clone()),
+    ));
+
+    let coordinates = Coordinates { x: 0.0, y: 5.0 };
+    let tile_coord = coord_to_tile_coord(coordinates);
+    let bundle = UnitBundle::new(
+        Name::new("Monstre"),
+        GridPosition(tile_coord),
+        CurrentMapId(map::DEFAULT_MAP_ID),
+        SpeedStat::from_tiles_per_second(Unit::DEFAULT_TILE_PER_SECOND_SPEED),
+    );
+    commands.spawn((
+        bundle,
+        Sprite::from_image(asset_server.load(Unit::PATH_PNG).clone()),
+    ));
 }
